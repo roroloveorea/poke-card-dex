@@ -2,7 +2,7 @@
 
 PokeCardDex is a website for discovering Pokémon trading cards, exploring every released set, and checking the latest available market prices. It combines the familiar browsing experience of a Pokédex with practical tools for collectors.
 
-![PokeCardDex homepage showing card search and the Pokémon card archive](docs/images/pokecarddex-home-preview.webp)
+![PokeCardDex homepage showing card search and the Pokémon card archive](docs/images/pokecarddex-home-preview-v2.webp)
 
 ## Vision
 
