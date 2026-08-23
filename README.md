@@ -67,3 +67,29 @@ PokeCardDex will need reliable sources for card metadata, images, set informatio
 ## Working tagline
 
 > Discover every set. Track every card. Know the latest price.
+
+## Development
+
+PokeCardDex currently contains the first English catalog tracer: an exact Base Set Charizard printing fetched from the Pokémon TCG API through a server-only, provider-neutral catalog interface.
+
+Requirements:
+
+- Node.js 20 or newer
+- npm
+
+Copy `.env.example` to `.env.local` and optionally add a Pokémon TCG API key. The application works without a key for low-volume development, while a key provides higher provider rate limits. Credentials are read only by the server catalog adapter.
+
+```bash
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000/card-printings/base1-4` to view the tracer.
+
+Verification commands:
+
+```bash
+npm test
+npm run typecheck
+npm run build
+```
