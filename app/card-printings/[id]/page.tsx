@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { getCatalog } from "@/src/catalog/server-catalog";
 import { ObservationDate, Price } from "@/app/_components/price";
+import { languageName } from "@/src/catalog/language";
 
 export default async function CardPrintingPage({
   params,
@@ -39,7 +40,7 @@ export default async function CardPrintingPage({
         />
       </div>}
       <div className="card-copy">
-        <p className="eyebrow">English</p>
+        <p className="eyebrow">{languageName(cardPrinting.language)}</p>
         <h1>{cardPrinting.name}</h1>
         <p className="printing-id">
           {cardPrinting.set.name} · {cardPrinting.collectorNumber}

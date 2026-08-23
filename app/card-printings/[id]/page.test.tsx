@@ -72,4 +72,18 @@ describe("exact card-printing page", () => {
     expect(screen.queryByText("Artist")).not.toBeInTheDocument();
     expect(screen.queryByText("$0.00")).not.toBeInTheDocument();
   });
+
+  it("renders a Japanese printing with an attributed YuYuTei JPY quote", async () => {
+    vi.mocked(getCatalog).mockReturnValue({ getCardPrinting: vi.fn().mockResolvedValue({
+      id: "rb-card-card-uuid", language: "ja", name: "リザードン", collectorNumber: "006/165",
+      set: { id: "rb-set-sv2a", language: "ja", name: "ポケモンカード151", releaseDate: "2023-06-16" },
+      priceQuotes: [{ variant: "Normal · Near Mint · Lowest", amount: 1280, currency: "JPY", source: "YuYuTei via RareBit", observedAt: "2026-08-24T00:00:00.000Z", stale: false }],
+    }) } as unknown as Catalog);
+
+    render(await CardPrintingPage({ params: Promise.resolve({ id: "rb-card-card-uuid" }) }));
+
+    expect(screen.getByText("Japanese")).toBeVisible();
+    expect(screen.getByText(/¥1,280 JPY/)).toBeVisible();
+    expect(screen.getByText(/YuYuTei via RareBit/)).toBeVisible();
+  });
 });

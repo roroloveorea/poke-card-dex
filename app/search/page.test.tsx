@@ -49,4 +49,16 @@ describe("English catalog search", () => {
     expect(screen.getByRole("link", { name: /try again/i })).toHaveAttribute("href", "/search?q=Charizard");
     expect(screen.getByRole("link", { name: /back to home/i })).toHaveAttribute("href", "/");
   });
+
+  it("labels Japanese RareBit results by language", async () => {
+    const set = { id: "rb-set-sv2a", language: "ja" as const, name: "ポケモンカード151", releaseDate: "2023-06-16" };
+    vi.mocked(getCatalog).mockReturnValue({ searchCardPrintings: vi.fn().mockResolvedValue([
+      { id: "rb-card-uuid", language: "ja", name: "リザードン", collectorNumber: "006/165", set, priceQuotes: [] },
+    ]) } as unknown as Catalog);
+
+    render(await SearchPage({ searchParams: Promise.resolve({ q: "リザードン" }) }));
+
+    expect(screen.getByText("Japanese · ポケモンカード151 · 006/165")).toBeVisible();
+    expect(screen.getByRole("link", { name: /リザードン/ })).toHaveAttribute("href", "/card-printings/rb-card-uuid");
+  });
 });

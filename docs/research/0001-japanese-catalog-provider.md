@@ -2,7 +2,7 @@
 
 ## Decision
 
-**Status: blocked as of 2026-08-23.** No evaluated source provides both a complete, stable Japanese Pokémon TCG card-printing catalog and legitimate, variant-specific indicative JPY quotes with the rights and metadata required by the Catalog MVP. Issues #8, #9, #10, and the Japanese half of #11 must remain blocked until a provider agreement closes the gaps below.
+**Status: proof of concept added on 2026-08-24; production approval remains blocked.** RareBit now provides enough documented API structure to test Japanese card identity and YuYuTei JPY quote mapping. Production use and a complete Japanese set directory remain blocked until plan-specific display/cache rights are confirmed and the API can distinguish Japanese sets from the broader `EAST` region.
 
 This is a product and licensing blocker, not an adapter limitation. PokeCardDex must not scrape an official or marketplace website, relabel live asking prices as market quotes, infer Japanese printings from English releases, or ship a Japanese tracer backed only by fixtures.
 
@@ -25,15 +25,16 @@ An approvable provider or provider combination must supply:
 | [Rakuten Ichiba Item Search API](https://webservice.rakuten.co.jp/index.php/documentation/ichiba-item-search) | Registered app ID and access key are required. The [terms](https://webservice.rakuten.co.jp/guide/rule) require Rakuten links/branding where applicable, restrict monetization outside Rakuten Affiliate, and restrict copying, altering, and broadly shared storage of returned information. No reviewed rule grants the required one-day public cache. | Returns merchant listing/item codes and keyword results, not an authoritative Japanese set checklist, exact card-printing identifiers, or normalized ungraded variants. Results exclude auctions and C2C inventory. | Returns current JPY asking prices for listings. Those are not a variant-specific market quote, do not provide a quote observation timestamp, and cannot reliably distinguish card condition, language, lot, or sealed product. | **Reject.** Asking-price search cannot be represented as the MVP's `PriceQuote`. |
 | [eBay Browse API](https://developer.ebay.com/develop/api/buy/browse_api) | OAuth application token and eBay API license/Buy experience obligations apply. | Returns purchasable listing IDs and seller-authored aspects, not a complete Japanese card catalog or stable set/collector-number printing model. | Listing prices can carry currency but are current asks, not a native-Japanese variant market quote with a validated observation policy. | **Reject.** It is a listing/buying integration, not the required catalog-and-price provider. |
 | Official Japanese Pokémon Card Game card search | No documented public API or feed license was found. General website access does not grant bulk extraction, redistribution, image use, or commercial caching rights. | The human-facing database may be authoritative, but automated coverage and identifier stability cannot be depended on without an agreement. | No provider API for ungraded JPY market quotes, source attribution, or observation timestamps was found. | **Reject unless The Pokémon Company grants written API/feed and image rights.** Scraping is out of scope. |
+| [RareBit Public API](https://rarebit.app/en/docs) | Paid API keys support `catalog:read` and `prices:read` scopes and must remain server-side. Reviewed public terms do not explicitly grant this project's one-day cache/display policy, so production enablement still needs plan-specific confirmation. | Stable card UUIDs, `printedIn=ja`, Japanese localization, images, and card metadata support a Japanese card tracer. Set-level `EAST` includes Japanese plus Korean and Chinese exclusives, so it is not sufficient for a Japanese-only directory. | Current price series include source, language, currency, condition, printing, grading, and timestamp. The adapter accepts only `YUYUTEI`, `ja`, `JPY`, and ungraded observations. | **Accept for a key-gated proof of concept.** Do not enable in production or claim complete Japanese set coverage until the remaining rights and set-language gaps close. |
 
 ## Validated missing-price and freshness behavior
 
-No candidate returned a sample that could legitimately map to `PriceQuote { variant, amount, currency: "JPY", source, observedAt, stale }`. Consequently:
+RareBit's documented current-price series can map to `PriceQuote { variant, amount, currency: "JPY", source, observedAt, stale }`. The proof-of-concept adapter applies these constraints:
 
-- an absent Japanese quote would map to `priceQuotes: []` and display `Price unavailable`, never `¥0`;
-- staleness cannot be calculated until the provider supplies a trustworthy observation timestamp;
+- an absent Japanese quote maps to `priceQuotes: []` and displays `Price unavailable`, never `¥0`;
+- staleness is calculated from RareBit's `capturedAt` timestamp using the configured one-day refresh boundary;
 - a marketplace listing's creation/update time must not be substituted for a market-quote observation time;
-- daily caching cannot start until the provider explicitly permits it and documents any faster deletion/update obligations.
+- production daily caching cannot be approved until the provider explicitly permits it and documents any faster deletion/update obligations.
 
 ## Integration constraints for reopening Japanese delivery
 

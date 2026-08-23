@@ -1,6 +1,8 @@
 import "server-only";
 
+import { createCompositeCatalog } from "./composite-catalog";
 import { createPokemonTcgCatalog } from "./pokemon-tcg-catalog";
+import { createRareBitCatalog } from "./rarebit-catalog";
 
 const DAILY_REFRESH_SECONDS = 86_400;
 
@@ -11,9 +13,17 @@ function catalogRefreshSeconds() {
 
 export function getCatalog() {
   const revalidate = catalogRefreshSeconds();
-  return createPokemonTcgCatalog({
-    request: (url, init) => fetch(url, { ...init, cache: "force-cache", next: { revalidate } }),
+  const request = (url: string, init: { headers: Record<string, string>; signal: AbortSignal }) => fetch(url, { ...init, cache: "force-cache", next: { revalidate } });
+  const primary = createPokemonTcgCatalog({
+    request,
     apiKey: process.env.POKEMON_TCG_API_KEY ?? "",
     baseUrl: process.env.POKEMON_TCG_API_BASE_URL,
   });
+  const rareBitKey = process.env.RAREBIT_API_KEY?.trim();
+  if (!rareBitKey) return primary;
+  return createCompositeCatalog(primary, createRareBitCatalog({
+    request,
+    apiKey: rareBitKey,
+    baseUrl: process.env.RAREBIT_API_BASE_URL,
+  }));
 }

@@ -17,6 +17,13 @@ function providerResponse(url) {
   if (url.pathname === "/v2/cards/base1-4") return { data: card };
   if (url.pathname === "/v2/cards") return { data: [card], count: 1, totalCount: 1 };
   if (url.pathname === "/v2/sets") return { data: [set], count: 1, totalCount: 1 };
+  const rareBitSet = { code: "sv2a", name: "ポケモンカード151", releaseDate: "2023-06-16T00:00:00.000Z", cardCount: 210, printRegion: "EAST" };
+  const rareBitCard = { id: "jp-uuid", name: "リザードン", number: "006", printedNumber: "006/165", gameCode: "pokemon_tcg", availableLanguages: ["ja"], set: { code: "sv2a", name: rareBitSet.name, printRegion: "EAST" } };
+  if (url.pathname === "/api/v1/public/catalog/cards") return { data: [rareBitCard], pagination: { limit: 20, offset: 0, total: 1, hasMore: false } };
+  if (url.pathname === "/api/v1/public/catalog/cards/jp-uuid") return rareBitCard;
+  if (url.pathname === "/api/v1/public/catalog/sets/sv2a") return rareBitSet;
+  if (url.pathname === "/api/v1/public/catalog/images") return { data: [{ id: "jp-uuid", kind: "card", imageUrl: "" }] };
+  if (url.pathname === "/api/v1/public/prices/CARD/jp-uuid/current") return { itemKind: "CARD", itemId: "jp-uuid", sources: [{ source: "YUYUTEI", variant: "LOWEST", language: "ja", price: 1280, currency: "JPY", condition: "NEAR_MINT", printing: "NORMAL", grading: null, capturedAt: "2026-08-24T00:00:00.000Z" }] };
   return undefined;
 }
 
@@ -63,7 +70,7 @@ async function waitForApp(origin) {
 }
 
 async function visitEveryJourney(origin, providerOrigin) {
-  for (const path of ["/sets", "/sets/base1", "/search?q=Charizard", "/card-printings/base1-4"]) {
+  for (const path of ["/sets", "/sets/base1", "/search?q=Charizard", "/card-printings/base1-4", "/card-printings/rb-card-jp-uuid"]) {
     const response = await fetch(`${origin}${path}`);
     const body = await response.text();
     if (!response.ok) throw new Error(`${path} returned ${response.status}`);
@@ -99,6 +106,8 @@ try {
     ...process.env,
     POKEMON_TCG_API_KEY: credentialMarker,
     POKEMON_TCG_API_BASE_URL: `${providerOrigin}/v2`,
+    RAREBIT_API_KEY: credentialMarker,
+    RAREBIT_API_BASE_URL: `${providerOrigin}/api`,
     CATALOG_REFRESH_SECONDS: String(refreshSeconds),
   };
 

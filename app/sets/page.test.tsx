@@ -36,6 +36,6 @@ describe("English set directory", () => {
     expect(screen.getByRole("link", { name: /try again/i })).toHaveAttribute("href", "/sets");
     vi.mocked(getCatalog).mockReturnValue({ listSets: vi.fn().mockResolvedValue([]) } as unknown as Catalog);
     rerender(await SetsPage());
-    expect(screen.getByText(/no English sets/i)).toBeVisible();
+    expect(screen.getByText(/no sets/i)).toBeVisible();
   });
 });
