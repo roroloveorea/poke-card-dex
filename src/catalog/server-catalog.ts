@@ -3,6 +3,7 @@ import "server-only";
 import { createCompositeCatalog } from "./composite-catalog";
 import { createPokemonTcgCatalog } from "./pokemon-tcg-catalog";
 import { createRareBitCatalog } from "./rarebit-catalog";
+import { createTcgdexCatalog, type EasternLanguage } from "./tcgdex-catalog";
 
 const DAILY_REFRESH_SECONDS = 86_400;
 
@@ -26,4 +27,13 @@ export function getCatalog() {
     apiKey: rareBitKey,
     baseUrl: process.env.RAREBIT_API_BASE_URL,
   }));
+}
+
+export function getEasternCatalog(language: EasternLanguage) {
+  const revalidate = catalogRefreshSeconds();
+  return createTcgdexCatalog({
+    language,
+    request: (url, init) => fetch(url, { ...init, cache: "force-cache", next: { revalidate } }),
+    baseUrl: process.env.TCGDEX_API_BASE_URL,
+  });
 }

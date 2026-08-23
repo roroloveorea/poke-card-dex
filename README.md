@@ -70,7 +70,7 @@ PokeCardDex will need reliable sources for card metadata, images, set informatio
 
 ## Development
 
-PokeCardDex contains an English catalog backed by the Pokémon TCG API and an opt-in Japanese proof of concept backed by RareBit. When configured, Japanese search results use RareBit's stable card IDs and exact card pages show only ungraded Japanese YuYuTei quotes denominated in JPY.
+PokeCardDex contains an English catalog backed by the Pokémon TCG API and Eastern set catalogs backed by TCGdex. The catalog chooser separates English from Eastern releases, then separates Eastern sets into Japanese, Korean, Simplified Chinese, and Traditional Chinese card databases. An opt-in RareBit proof of concept adds Japanese search and exact-card YuYuTei quotes denominated in JPY when configured.
 
 Requirements:
 
@@ -79,7 +79,7 @@ Requirements:
 
 Copy `.env.example` to `.env.local` and optionally add a Pokémon TCG API key. To enable the Japanese proof of concept, add a paid RareBit key with `catalog:read` and `prices:read` scopes as `RAREBIT_API_KEY`. Credentials are read only by server catalog adapters.
 
-RareBit calls use the same one-day application cache as the English catalog. Confirm that this cache interval and the intended display are permitted by your RareBit plan before enabling the integration outside development. Japanese cards are searchable, but RareBit's `EAST` set directory is intentionally not merged because it also contains Korean and Chinese exclusives and does not provide set-level printed-language evidence.
+Catalog calls use a one-day application cache. TCGdex supplies language-specific Eastern set and card metadata without credentials. RareBit's broader `EAST` set directory is intentionally not used because it mixes Japanese, Korean, and Chinese releases. Confirm that the cache interval and intended price display are permitted by your RareBit plan before enabling RareBit outside development.
 
 ```bash
 npm install

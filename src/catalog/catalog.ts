@@ -1,4 +1,4 @@
-export type Language = "en" | "ja";
+export type Language = "en" | "ja" | "ko" | "zh-cn" | "zh-tw";
 
 export type CatalogSet = {
   id: string;

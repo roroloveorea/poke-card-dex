@@ -4,8 +4,9 @@ vi.mock("server-only", () => ({}));
 vi.mock("./pokemon-tcg-catalog", () => ({ createPokemonTcgCatalog: vi.fn((options) => options) }));
 vi.mock("./rarebit-catalog", () => ({ createRareBitCatalog: vi.fn((options) => options) }));
 vi.mock("./composite-catalog", () => ({ createCompositeCatalog: vi.fn((primary, japanese) => ({ primary, japanese })) }));
+vi.mock("./tcgdex-catalog", () => ({ createTcgdexCatalog: vi.fn((options) => options) }));
 
-import { getCatalog } from "./server-catalog";
+import { getCatalog, getEasternCatalog } from "./server-catalog";
 
 describe("server catalog boundary", () => {
   beforeEach(() => {
@@ -15,6 +16,7 @@ describe("server catalog boundary", () => {
     delete process.env.POKEMON_TCG_API_BASE_URL;
     delete process.env.RAREBIT_API_KEY;
     delete process.env.RAREBIT_API_BASE_URL;
+    delete process.env.TCGDEX_API_BASE_URL;
   });
 
   it("configures provider responses for one-day reuse and keeps the key in server request headers", async () => {
@@ -43,6 +45,18 @@ describe("server catalog boundary", () => {
       headers: { "X-API-Key": "rarebit-browser-must-not-see-this", "x-lang": "ja" },
       cache: "force-cache",
       next: { revalidate: 86_400 },
+    }));
+  });
+
+  it("configures the selected Eastern language with the same server cache boundary", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
+    const catalog = getEasternCatalog("ko") as unknown as { language: string; request: typeof fetch };
+
+    await catalog.request("https://tcgdex.test", { signal: new AbortController().signal });
+
+    expect(catalog.language).toBe("ko");
+    expect(fetchMock).toHaveBeenCalledWith("https://tcgdex.test", expect.objectContaining({
+      cache: "force-cache", next: { revalidate: 86_400 },
     }));
   });
 });

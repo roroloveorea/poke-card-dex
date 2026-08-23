@@ -24,6 +24,11 @@ function providerResponse(url) {
   if (url.pathname === "/api/v1/public/catalog/sets/sv2a") return rareBitSet;
   if (url.pathname === "/api/v1/public/catalog/images") return { data: [{ id: "jp-uuid", kind: "card", imageUrl: "" }] };
   if (url.pathname === "/api/v1/public/prices/CARD/jp-uuid/current") return { itemKind: "CARD", itemId: "jp-uuid", sources: [{ source: "YUYUTEI", variant: "LOWEST", language: "ja", price: 1280, currency: "JPY", condition: "NEAR_MINT", printing: "NORMAL", grading: null, capturedAt: "2026-08-24T00:00:00.000Z" }] };
+  const tcgDexSet = { id: "M5", name: "アビスアイ", releaseDate: "2026-07-17", cardCount: { total: 1, official: 1 }, cards: [{ id: "M5-001", localId: "001", name: "トロピウス" }] };
+  const tcgDexCard = { id: "M5-001", localId: "001", name: "トロピウス", category: "Pokemon", set: tcgDexSet };
+  if (url.pathname === "/tcgdex/ja/sets") return [{ id: tcgDexSet.id, name: tcgDexSet.name, cardCount: tcgDexSet.cardCount }];
+  if (url.pathname === "/tcgdex/ja/sets/M5") return tcgDexSet;
+  if (url.pathname === "/tcgdex/ja/cards/M5-001") return tcgDexCard;
   return undefined;
 }
 
@@ -35,7 +40,7 @@ const provider = createServer((request, response) => {
     response.writeHead(404).end();
     return;
   }
-  if (request.headers["x-api-key"] !== credentialMarker) {
+  if (!url.pathname.startsWith("/tcgdex/") && request.headers["x-api-key"] !== credentialMarker) {
     response.writeHead(401).end();
     return;
   }
@@ -70,7 +75,7 @@ async function waitForApp(origin) {
 }
 
 async function visitEveryJourney(origin, providerOrigin) {
-  for (const path of ["/sets", "/sets/base1", "/search?q=Charizard", "/card-printings/base1-4", "/card-printings/rb-card-jp-uuid"]) {
+  for (const path of ["/sets", "/sets/english", "/sets/base1", "/sets/eastern", "/sets/eastern/japanese", "/sets/eastern/japanese/tdx-ja-set-M5", "/card-printings/eastern/japanese/tdx-ja-card-M5-001", "/search?q=Charizard", "/card-printings/base1-4", "/card-printings/rb-card-jp-uuid"]) {
     const response = await fetch(`${origin}${path}`);
     const body = await response.text();
     if (!response.ok) throw new Error(`${path} returned ${response.status}`);
@@ -108,6 +113,7 @@ try {
     POKEMON_TCG_API_BASE_URL: `${providerOrigin}/v2`,
     RAREBIT_API_KEY: credentialMarker,
     RAREBIT_API_BASE_URL: `${providerOrigin}/api`,
+    TCGDEX_API_BASE_URL: `${providerOrigin}/tcgdex`,
     CATALOG_REFRESH_SECONDS: String(refreshSeconds),
   };
 

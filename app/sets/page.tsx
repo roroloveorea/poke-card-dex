@@ -1,11 +1,4 @@
 import Link from "next/link";
-import { getCatalog } from "@/src/catalog/server-catalog";
-import { SetGrid } from "@/app/_components/set-grid";
-
 export default async function SetsPage() {
-  let sets;
-  try { sets = await getCatalog().listSets(); } catch {
-    return <section className="error-shell" role="alert"><p className="eyebrow">Provider unavailable</p><h1>The set directory is temporarily unavailable.</h1><div className="actions"><Link className="button" href="/sets">Try again</Link><Link className="text-link" href="/">Back to Home</Link></div></section>;
-  }
-  return <section className="page-shell"><p className="eyebrow">Set catalog</p><h1>Browse every verified set.</h1><p className="intro">Newest releases appear first.</p>{sets.length === 0 ? <p className="empty-state">There are no sets available right now.</p> : <SetGrid sets={sets} />}</section>;
+  return <section className="page-shell"><p className="eyebrow">Set catalog</p><h1>Choose a catalog.</h1><p className="intro">Start with the English catalog or explore Eastern releases by language.</p><ul className="set-grid"><li><Link className="set-tile" href="/sets/english"><strong>English</strong><span>Western releases</span><span>Browse sets →</span></Link></li><li><Link className="set-tile" href="/sets/eastern"><strong>Eastern</strong><span>Japanese, Korean, and Chinese</span><span>Choose a language →</span></Link></li></ul></section>;
 }
