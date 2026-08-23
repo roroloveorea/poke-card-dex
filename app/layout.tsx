@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </header>
         <main id="main-content">{children}</main>
         <footer className="site-footer">
-          <div><strong>PokeCardDex</strong><span>Discover every set. Find the exact printing.</span></div>
+          <div><strong>PokeCardDex</strong><span>Browse supported sets. Find the exact printing.</span></div>
           <nav aria-label="Footer navigation"><Link href="/sets">Catalogs</Link><Link href="/design-system">Design system</Link></nav>
         </footer>
         </CurrencyProvider>

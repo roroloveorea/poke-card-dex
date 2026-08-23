@@ -4,7 +4,7 @@ import { CurrencyProvider, CurrencySelector } from "./currency";
 import { Price } from "./price";
 
 const quote = { variant: "Holofoil", amount: 12, currency: "USD" as const, source: "TCGplayer", observedAt: "2026-08-20", stale: false };
-const snapshot = { base: "EUR", rates: { EUR: 1, USD: 1.2, JPY: 180 }, observedAt: "2026-08-24", source: "European Central Bank", stale: false };
+const snapshot = { base: "EUR", rates: { EUR: 1, USD: 1.2, JPY: 180 }, observedAt: "2026-08-24", publishedAt: "2026-08-24T14:00:00.000Z", source: "European Central Bank", stale: false };
 
 describe("display currency preference", () => {
   beforeEach(() => {
@@ -21,7 +21,7 @@ describe("display currency preference", () => {
 
     await waitFor(() => expect(screen.getByLabelText("Display prices in")).toHaveValue("JPY"));
     expect(await screen.findByText("¥1,800 JPY")).toBeVisible();
-    expect(screen.getByText(/Converted from \$12\.00 USD/)).toHaveTextContent(/European Central Bank.*August 24, 2026/);
+    expect(screen.getByText(/Converted from \$12\.00 USD/)).toHaveTextContent(/European Central Bank rate published August 24, 2026 at 2:00 PM/);
 
     fireEvent.change(screen.getByLabelText("Display prices in"), { target: { value: "EUR" } });
     expect(localStorage.getItem("display-currency")).toBe("EUR");

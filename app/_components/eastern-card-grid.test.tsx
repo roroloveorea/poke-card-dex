@@ -11,7 +11,7 @@ describe("Eastern card grid", () => {
 
     render(<EasternCardGrid cards={[card]} catalogSlug="japanese" />);
 
-    expect(screen.getByRole("img", { name: /トロピウス/ })).toHaveAttribute("src", card.imageUrl);
+    expect(screen.getByRole("img", { name: /トロピウス/ }).getAttribute("src")).toContain(encodeURIComponent(card.imageUrl!));
     expect(screen.getByText("€0.05 EUR")).toBeVisible();
   });
 });

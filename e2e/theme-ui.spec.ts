@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const journeys = [
   ["home", "/"],
@@ -27,6 +27,16 @@ function luminance(channels: number[]) {
     return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
   });
   return 0.2126 * normalized[0] + 0.7152 * normalized[1] + 0.0722 * normalized[2];
+}
+
+async function contrastRatio(locator: Locator) {
+  const colors = await locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { foreground: style.color, background: style.backgroundColor };
+  });
+  const foreground = luminance(colorChannels(colors.foreground));
+  const background = luminance(colorChannels(colors.background));
+  return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
 }
 
 test("captures intentional visual baselines for each catalog journey", async ({ page }) => {
@@ -68,18 +78,49 @@ test("exposes keyboard focus, semantics, contrast, and reduced motion", async ({
   await expect(page.getByRole("navigation", { name: "Footer navigation" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
 
-  const contrast = await page.locator("body").evaluate((element) => {
-    const style = getComputedStyle(element);
-    return { foreground: style.color, background: style.backgroundColor };
-  });
-  const foreground = luminance(colorChannels(contrast.foreground));
-  const background = luminance(colorChannels(contrast.background));
-  const ratio = (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
-  expect(ratio).toBeGreaterThanOrEqual(4.5);
+  for (const selector of ["body", ".button:not(:disabled)", ".button-secondary", ".status-success", ".status-warning", ".status-error"]) {
+    expect(await contrastRatio(page.locator(selector).first()), `${selector} text contrast`).toBeGreaterThanOrEqual(4.5);
+  }
+
+  for (const [, path] of journeys) {
+    await page.goto(path);
+    await waitForStableUi(page);
+    await expect(page.getByRole("main")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+    const unnamedControls = await page.locator("a:visible, button:visible, input:visible, select:visible").evaluateAll((elements) => elements.filter((element) => {
+      if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement) return element.labels?.length === 0 && !element.getAttribute("aria-label");
+      return !element.textContent?.trim() && !element.getAttribute("aria-label");
+    }).length);
+    expect(unnamedControls, `${path} has unnamed interactive controls`).toBe(0);
+  }
+
+  await page.goto("/design-system");
 
   const motionDuration = await page.locator(".poke-ball-motion").first().evaluate((element) => getComputedStyle(element).animationDuration);
   const motionMilliseconds = motionDuration.endsWith("ms") ? Number.parseFloat(motionDuration) : Number.parseFloat(motionDuration) * 1_000;
   expect(motionMilliseconds).toBeLessThanOrEqual(0.01);
+});
+
+test("covers state motifs and ships efficient local hero artwork", async ({ page, request }) => {
+  await page.goto("/design-system");
+  await expect(page.locator(".ball-showcase [role=img]")).toHaveCount(4);
+  for (const motif of await page.locator(".ball-showcase [role=img]").all()) {
+    const box = await motif.boundingBox();
+    expect(Math.abs((box?.width ?? 0) - (box?.height ?? 0))).toBeLessThan(0.1);
+  }
+
+  await page.goto("/search");
+  await expect(page.locator(".empty-state")).toContainText("Enter a card name or collector number");
+  await page.goto("/search?q=missing");
+  await expect(page.locator(".empty-state")).toContainText("No card printings found");
+  await page.goto("/search?q=timeout");
+  await expect(page.locator(".empty-state[role=alert]")).toContainText("temporarily unavailable");
+  await expect(page.getByRole("link", { name: "Try again" })).toBeVisible();
+
+  const artwork = await request.get("/artwork/catalog-hero-pikachu.webp");
+  expect(artwork.ok()).toBe(true);
+  expect(artwork.headers()["content-type"]).toContain("image/webp");
+  expect((await artwork.body()).byteLength).toBeLessThan(150_000);
 });
 
 test("persists display currency and does not reorder card selections", async ({ page }) => {

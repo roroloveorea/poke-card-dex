@@ -5,6 +5,7 @@ export type ExchangeRateSnapshot = {
   base: "EUR";
   rates: Record<DisplayCurrency, number>;
   observedAt: string;
+  publishedAt?: string;
   source: "European Central Bank";
   stale: boolean;
 };

@@ -26,7 +26,7 @@ function send(response, status, body) {
 const provider = createServer((request, response) => {
   const url = new URL(request.url ?? "/", `http://127.0.0.1:${providerPort}`);
   if (url.pathname === "/ecb.xml") {
-    response.writeHead(200, { "Content-Type": "text/xml" });
+    response.writeHead(200, { "Content-Type": "text/xml", "Last-Modified": "Mon, 24 Aug 2026 14:00:00 GMT" });
     response.end(`<?xml version="1.0"?><Envelope><Cube><Cube time="2026-08-24"><Cube currency="USD" rate="1.2"/><Cube currency="JPY" rate="180"/></Cube></Cube></Envelope>`);
     return;
   }

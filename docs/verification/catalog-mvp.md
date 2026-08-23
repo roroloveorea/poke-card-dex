@@ -33,9 +33,9 @@ The bundled Home hero has fixed intrinsic dimensions and responsive `sizes`; run
 
 ## Display-currency verification
 
-Prices remain provider-native domain data. The shared display component may convert USD, JPY, or EUR for presentation, but sorting continues to use the original quotes. The server reads the ECB daily reference-rate XML, caches the request for one day, and exposes only the normalized EUR-base snapshot to the browser. Rates older than four days are considered stale; stale, malformed, or unavailable rates leave the original quote visible with an explanation.
+Price Quotes retain their native currency and Price Source attribution. The shared display component may convert USD, JPY, or EUR for presentation, but sorting continues to use the original Price Quotes. The server reads the ECB daily reference-rate XML, caches the request for one day, and exposes only the normalized EUR-base snapshot to the browser. Rates older than four days are considered stale; stale, malformed, or unavailable rates leave the original Price Quote visible with an explanation.
 
-The selector stores the preference locally and in a same-site cookie. Converted values always show the original amount/currency plus the European Central Bank source and observation date. ECB reference rates are informational rather than transaction rates.
+The selector stores the preference locally and in a same-site cookie. Converted values always show the original amount/currency plus the European Central Bank source. The UI shows the response's publication timestamp when ECB supplies `Last-Modified`; otherwise it labels the feed's date as a reference date without inventing time precision. ECB reference rates are informational rather than transaction rates.
 
 `npm run verify:browser-safety` starts a local provider boundary, creates and starts a real production build, then visits the directory, set, search, and exact-card journeys repeatedly. It proves provider responses are reused inside a controlled refresh window and fetched again after that boundary. The provider asserts that every external request originates on the server with the credential header, while browser responses and built browser artifacts are checked for the credential marker, provider hostname, header name, and provider query syntax.
 

@@ -3,7 +3,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { displayCurrencies, type DisplayCurrency, type ExchangeRateSnapshot } from "@/src/currency/exchange-rates";
 
-type RateStatus = "loading" | "ready" | "stale" | "unavailable";
+export type RateStatus = "loading" | "ready" | "stale" | "unavailable";
+export const currencyStatusCopy: Record<RateStatus, { selector: string; conversion: string }> = {
+  loading: { selector: "", conversion: "Showing original quote while conversion rates load." },
+  ready: { selector: "", conversion: "" },
+  stale: { selector: "Rates stale", conversion: "Showing original quote; conversion unavailable because ECB rates are stale." },
+  unavailable: { selector: "Rates unavailable", conversion: "Showing original quote; conversion temporarily unavailable." },
+};
 type CurrencyContextValue = {
   currency: DisplayCurrency;
   rates?: ExchangeRateSnapshot;
@@ -22,7 +28,8 @@ function isDisplayCurrency(value: string | null): value is DisplayCurrency {
 function isSnapshot(value: unknown): value is ExchangeRateSnapshot {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<ExchangeRateSnapshot>;
-  return candidate.base === "EUR" && candidate.source === "European Central Bank" && typeof candidate.observedAt === "string" && typeof candidate.stale === "boolean" && displayCurrencies.every((currency) => Number.isFinite(candidate.rates?.[currency]) && (candidate.rates?.[currency] ?? 0) > 0);
+  const hasValidPublicationTime = candidate.publishedAt === undefined || (typeof candidate.publishedAt === "string" && !Number.isNaN(new Date(candidate.publishedAt).getTime()));
+  return candidate.base === "EUR" && candidate.source === "European Central Bank" && typeof candidate.observedAt === "string" && hasValidPublicationTime && typeof candidate.stale === "boolean" && displayCurrencies.every((currency) => Number.isFinite(candidate.rates?.[currency]) && (candidate.rates?.[currency] ?? 0) > 0);
 }
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
@@ -74,7 +81,7 @@ export function CurrencySelector() {
         {displayCurrencies.map((value) => <option key={value} value={value}>{value}</option>)}
       </select>
       <span className="currency-status" aria-live="polite">
-        {status === "stale" ? "Rates stale" : status === "unavailable" ? "Rates unavailable" : ""}
+        {currencyStatusCopy[status].selector}
       </span>
     </div>
   );

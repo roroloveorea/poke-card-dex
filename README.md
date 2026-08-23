@@ -68,7 +68,7 @@ PokeCardDex will need reliable sources for card metadata, images, set informatio
 
 ## Working tagline
 
-> Discover every set. Track every card. Know the latest price.
+> Browse supported sets. Track exact card printings. See the latest available price quote.
 
 ## Development
 
@@ -99,6 +99,6 @@ npm run typecheck
 npm run verify:browser-safety
 ```
 
-The Pokémon-inspired theme tokens, four reusable Poké Ball variants, and component states are demonstrated at `/design-system`. The shared header also lets collectors display available prices in USD, JPY, or EUR; conversions use informational European Central Bank reference rates while preserving every original provider quote.
+The Pokémon-inspired theme tokens, four reusable Poké Ball variants, and component states are demonstrated at `/design-system`. The shared header also lets collectors display available prices in USD, JPY, or EUR; conversions use informational European Central Bank reference rates while preserving every original Price Quote and its Price Source.
 
 See the [Catalog MVP verification procedure](docs/verification/catalog-mvp.md) for browser checks and the current Japanese-provider blocker.
