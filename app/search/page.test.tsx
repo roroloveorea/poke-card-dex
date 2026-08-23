@@ -23,7 +23,22 @@ describe("English catalog search", () => {
     vi.mocked(getCatalog).mockReturnValue({ searchCardPrintings } as unknown as Catalog);
     render(await SearchPage({ searchParams: Promise.resolve({ q: "   " }) }));
     expect(searchCardPrintings).not.toHaveBeenCalled();
-    expect(screen.getByText(/enter a card name/i)).toBeVisible();
+    expect(screen.getByText(/enter a card name or collector number/i)).toBeVisible();
+  });
+
+  it("keeps combined name and collector-number terms in the shareable search journey", async () => {
+    const set = { id: "set-a", language: "en" as const, name: "Alpha", releaseDate: "2025/01/01" };
+    const searchCardPrintings = vi.fn().mockResolvedValue([
+      { id: "set-a-01a", language: "en", name: "Charizard ex", collectorNumber: "01a", set, priceQuotes: [] },
+    ]);
+    vi.mocked(getCatalog).mockReturnValue({ searchCardPrintings } as unknown as Catalog);
+
+    render(await SearchPage({ searchParams: Promise.resolve({ q: "  charizard   01  " }) }));
+
+    expect(searchCardPrintings).toHaveBeenCalledWith("charizard 01");
+    expect(screen.getByDisplayValue("charizard 01")).toBeVisible();
+    expect(screen.getByRole("link", { name: /Charizard ex/i })).toHaveAttribute("href", "/card-printings/set-a-01a");
+    expect(screen.getByText("English · Alpha · 01a")).toBeVisible();
   });
 
   it("keeps query, search, navigation, and retry available after failure", async () => {

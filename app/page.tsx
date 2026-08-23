@@ -13,7 +13,7 @@ export default async function HomePage() {
       <section>
       <p className="eyebrow">Collector reference</p>
       <h1>Find the exact printing.</h1>
-      <p className="intro">Search English Pokémon card printings by name, or browse the complete set catalog.</p>
+      <p className="intro">Search English Pokémon card printings by name and collector number, or browse the complete set catalog.</p>
       <SearchForm />
       </section>
       <section className="latest-sets"><div className="section-heading"><div><p className="eyebrow">Latest releases</p><h2>New in the catalog</h2></div><Link className="text-link" href="/sets">Browse all sets</Link></div>

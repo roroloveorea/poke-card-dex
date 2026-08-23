@@ -13,6 +13,7 @@ describe("Home", () => {
     ]) } as unknown as Catalog);
     render(await HomePage());
     expect(screen.getByRole("search")).toBeVisible();
+    expect(screen.getByPlaceholderText(/card name or collector number/i)).toBeVisible();
     expect(screen.getByRole("link", { name: /Newest/ })).toHaveAttribute("href", "/sets/new");
     expect(screen.getByText(/unofficial collector reference/i)).toBeVisible();
   });

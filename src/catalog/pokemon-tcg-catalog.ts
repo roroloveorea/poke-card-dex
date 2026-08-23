@@ -1,4 +1,5 @@
 import type { Catalog, CardPrinting, CatalogSet, PriceQuote } from "./catalog";
+import { searchQueryTerms } from "./search-query";
 
 type ProviderSet = { id: string; name: string; releaseDate: string; total?: number; images?: { logo?: string; symbol?: string } };
 type ProviderPrice = { market?: number };
@@ -19,6 +20,10 @@ const variantNames: Record<string, string> = {
   normal: "Normal", holofoil: "Holofoil", reverseHolofoil: "Reverse holofoil", "1stEditionHolofoil": "1st Edition holofoil",
 };
 const summaryVariantPriority = ["normal", "holofoil", "reverseHolofoil", "1stEditionHolofoil"];
+
+function escapeLuceneQueryTerm(term: string) {
+  return term.replace(/[+\-&|!(){}[\]^"~*?:\\/]/g, "\\$&");
+}
 
 export class CatalogUnavailableError extends Error {
   constructor() {
@@ -57,16 +62,17 @@ function mapCard(card: ProviderCard): CardPrinting {
   };
 }
 
-export function createPokemonTcgCatalog({ request, apiKey, timeoutMs = 8_000, pageSize = 250 }: {
-  request: RequestCatalog; apiKey: string; timeoutMs?: number; pageSize?: number;
+export function createPokemonTcgCatalog({ request, apiKey, timeoutMs = 8_000, pageSize = 250, baseUrl = "https://api.pokemontcg.io/v2" }: {
+  request: RequestCatalog; apiKey: string; timeoutMs?: number; pageSize?: number; baseUrl?: string;
 }): Catalog {
+  const providerBaseUrl = baseUrl.replace(/\/+$/, "");
   async function requestData<T>(path: string): Promise<{ data: T; count?: number; totalCount?: number }> {
     const controller = new AbortController();
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
       return await Promise.race([
         (async () => {
-          const response = await request(`https://api.pokemontcg.io/v2/${path}`, { headers: { "X-Api-Key": apiKey }, signal: controller.signal });
+          const response = await request(`${providerBaseUrl}/${path}`, { headers: { "X-Api-Key": apiKey }, signal: controller.signal });
           if (!response.ok) throw new CatalogUnavailableError();
           return await response.json() as { data: T; count?: number; totalCount?: number };
         })(),
@@ -106,10 +112,19 @@ export function createPokemonTcgCatalog({ request, apiKey, timeoutMs = 8_000, pa
       return (await allPages<ProviderCard>("cards", `set.id:\"${safeId}\"`)).map(mapCard);
     },
     async searchCardPrintings(query) {
-      const normalized = query.trim();
-      if (!normalized) return [];
-      const safeQuery = normalized.replaceAll('"', "");
-      return (await allPages<ProviderCard>("cards", `name:\"*${safeQuery}*\"`)).map(mapCard);
+      const terms = searchQueryTerms(query);
+      if (terms.length === 0) return [];
+      const providerQuery = terms.map((term) => {
+        const safeTerm = escapeLuceneQueryTerm(term);
+        return `(name:*${safeTerm}* OR number:${safeTerm}*)`;
+      }).join(" AND ");
+      const cards = (await allPages<ProviderCard>("cards", providerQuery)).map(mapCard);
+      const normalizedTerms = terms.map((term) => term.toLocaleLowerCase());
+      return cards.filter((card) => {
+        const name = card.name.toLocaleLowerCase();
+        const collectorNumber = card.collectorNumber.toLocaleLowerCase();
+        return normalizedTerms.every((term) => name.includes(term) || collectorNumber.startsWith(term));
+      });
     },
     async getCardPrinting(id) { return mapCard((await requestData<ProviderCard>(`cards/${encodeURIComponent(id)}`)).data); },
   };

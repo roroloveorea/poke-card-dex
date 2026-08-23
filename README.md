@@ -91,5 +91,7 @@ Verification commands:
 ```bash
 npm test
 npm run typecheck
-npm run build
+npm run verify:browser-safety
 ```
+
+See the [Catalog MVP verification procedure](docs/verification/catalog-mvp.md) for browser checks and the current Japanese-provider blocker.

@@ -9,7 +9,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "verify:browser-safety": "POKEMON_TCG_API_KEY=pokecarddex-browser-safety-marker npm run build && BROWSER_SAFETY_MARKER=pokecarddex-browser-safety-marker node scripts/verify-browser-safety.mjs"
+    "verify:browser-safety": "node scripts/verify-production.mjs"
   },
   "dependencies": {
     "next": "16.3.2",

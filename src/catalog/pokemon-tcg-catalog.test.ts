@@ -89,7 +89,42 @@ describe("Pokémon TCG catalog", () => {
     await expect(catalog.listCardPrintings("base1")).resolves.toHaveLength(1);
     await expect(catalog.searchCardPrintings("  ChAr  ")).resolves.toHaveLength(1);
     expect(request.mock.calls[0][0]).toContain(encodeURIComponent('set.id:"base1"'));
-    expect(request.mock.calls[1][0]).toContain(encodeURIComponent('name:"*ChAr*"'));
+    expect(new URL(request.mock.calls[1][0]).searchParams.get("q")).toBe("(name:*ChAr* OR number:ChAr*)");
+  });
+
+  it("matches every normalized search term across card name or collector-number prefix", async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({
+      data: [
+        { id: "match", name: "Charizard ex", number: "01a", images: {}, set: { id: "set-a", name: "Alpha", releaseDate: "2025/01/01" } },
+        { id: "wrong-number", name: "Charizard ex", number: "42", images: {}, set: { id: "set-a", name: "Alpha", releaseDate: "2025/01/01" } },
+        { id: "wrong-name", name: "Pikachu", number: "01b", images: {}, set: { id: "set-a", name: "Alpha", releaseDate: "2025/01/01" } },
+      ],
+      count: 3,
+      totalCount: 3,
+    }) });
+    const catalog = createPokemonTcgCatalog({ request, apiKey: "secret" });
+
+    await expect(catalog.searchCardPrintings("  CHARIZARD   01  ")).resolves.toEqual([
+      expect.objectContaining({ id: "match", collectorNumber: "01a" }),
+    ]);
+    const providerQuery = new URL(request.mock.calls[0][0]).searchParams.get("q");
+    expect(providerQuery).toContain("name:*CHARIZARD*");
+    expect(providerQuery).toContain("number:01*");
+  });
+
+  it("preserves meaningful letters and punctuation in collector-number-only searches", async () => {
+    const card = (id: string, number: string) => ({
+      id, name: "Pikachu", number, images: {}, set: { id: "set-a", name: "Alpha", releaseDate: "2025/01/01" },
+    });
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({
+      data: [card("match", "TG01-a"), card("not-prefix", "01-TG")], count: 2, totalCount: 2,
+    }) });
+    const catalog = createPokemonTcgCatalog({ request, apiKey: "secret" });
+
+    await expect(catalog.searchCardPrintings("tg01-")).resolves.toEqual([
+      expect.objectContaining({ id: "match", collectorNumber: "TG01-a" }),
+    ]);
+    expect(new URL(request.mock.calls[0][0]).searchParams.get("q")).toContain("number:tg01\\-*");
   });
 
   it("reports a provider failure as catalog unavailability", async () => {

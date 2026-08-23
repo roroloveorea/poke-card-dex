@@ -3,7 +3,7 @@ import { extname, join } from "node:path";
 
 const roots = [".next/static", ".next/server/app"];
 const browserExtensions = new Set([".js", ".html", ".rsc"]);
-const forbidden = [process.env.BROWSER_SAFETY_MARKER, "api.pokemontcg.io", "X-Api-Key", "set.id:"]
+const forbidden = [process.env.BROWSER_SAFETY_MARKER, process.env.BROWSER_PROVIDER_ORIGIN, "api.pokemontcg.io", "X-Api-Key", "set.id:"]
   .filter(Boolean);
 
 async function filesBelow(directory) {
