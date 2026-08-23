@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getCatalog } from "@/src/catalog/server-catalog";
+import { Price } from "@/app/_components/price";
 
 export default async function CardPrintingPage({
   params,
@@ -31,12 +32,12 @@ export default async function CardPrintingPage({
 
   return (
     <article className="card-shell">
-      <div className="card-artwork">
+      {cardPrinting.imageUrl && <div className="card-artwork">
         <img
           src={cardPrinting.imageUrl}
           alt={`${cardPrinting.name} from ${cardPrinting.set.name}, card ${cardPrinting.collectorNumber}`}
         />
-      </div>
+      </div>}
       <div className="card-copy">
         <p className="eyebrow">English</p>
         <h1>{cardPrinting.name}</h1>
@@ -48,7 +49,17 @@ export default async function CardPrintingPage({
             <dt>Released</dt>
             <dd>{cardPrinting.set.releaseDate}</dd>
           </div>
+          {cardPrinting.rarity && <div><dt>Rarity</dt><dd>{cardPrinting.rarity}</dd></div>}
+          {cardPrinting.artist && <div><dt>Artist</dt><dd>{cardPrinting.artist}</dd></div>}
+          {cardPrinting.hp && <div><dt>HP</dt><dd>{cardPrinting.hp}</dd></div>}
+          {cardPrinting.types?.length ? <div><dt>Type</dt><dd>{cardPrinting.types.join(", ")}</dd></div> : null}
         </dl>
+        {cardPrinting.rules?.length ? <section><h2>Card rules</h2>{cardPrinting.rules.map((rule) => <p key={rule}>{rule}</p>)}</section> : null}
+        <section className="prices" aria-labelledby="prices-heading">
+          <h2 id="prices-heading">Ungraded prices</h2>
+          {cardPrinting.priceQuotes.length === 0 ? <p>Price unavailable</p> : <ul>{cardPrinting.priceQuotes.map((quote) => <li key={quote.variant}><strong>{quote.variant}</strong><Price quote={quote} /><small>{quote.source} · observed {quote.observedAt}{quote.stale ? " · Stale quote" : ""}</small></li>)}</ul>}
+          <p className="disclaimer">Prices are indicative market quotes, not guaranteed sale values.</p>
+        </section>
       </div>
     </article>
   );

@@ -1,16 +1,24 @@
 import Link from "next/link";
+import { SearchForm } from "@/app/_components/search-form";
+import { getCatalog } from "@/src/catalog/server-catalog";
+import type { CatalogSet } from "@/src/catalog/catalog";
 
-export default function HomePage() {
+export default async function HomePage() {
+  let latestSets: CatalogSet[] = [];
+  let setsUnavailable = false;
+  try { latestSets = (await getCatalog().listSets()).slice(0, 4); } catch { setsUnavailable = true; }
   return (
-    <section className="home-shell">
+    <div className="home-shell">
+      <section>
       <p className="eyebrow">Collector reference</p>
       <h1>Find the exact printing.</h1>
-      <p className="intro">
-        Identify a Pokémon card by its set and collector number.
-      </p>
-      <Link className="button" href="/card-printings/base1-4">
-        View the English catalog tracer
-      </Link>
-    </section>
+      <p className="intro">Search English Pokémon card printings by name, or browse the complete set catalog.</p>
+      <SearchForm />
+      </section>
+      <section className="latest-sets"><div className="section-heading"><div><p className="eyebrow">Latest releases</p><h2>New in the catalog</h2></div><Link className="text-link" href="/sets">Browse all sets</Link></div>
+      {setsUnavailable ? <div className="empty-state" role="alert">Latest sets are temporarily unavailable. <Link href="/">Try again</Link>.</div> : latestSets.length === 0 ? <p className="empty-state">No English sets are available right now.</p> : <ul className="set-grid">{latestSets.map((set) => <li key={set.id}><Link className="set-tile" href={`/sets/${set.id}`}><strong>{set.name}</strong><span>{set.releaseDate}</span>{set.cardCount !== undefined && <span>{set.cardCount} cards</span>}</Link></li>)}</ul>}
+      </section>
+      <p className="disclaimer">PokeCardDex is an unofficial collector reference and is not affiliated with Nintendo, Creatures, Game Freak, or The Pokémon Company.</p>
+    </div>
   );
 }
