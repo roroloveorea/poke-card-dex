@@ -10,13 +10,14 @@ vi.mock("next/navigation", () => ({ notFound: vi.fn(() => { throw new Error("not
 describe("Eastern language set directory", () => {
   it("renders Japanese sets with language-scoped links", async () => {
     vi.mocked(getEasternCatalog).mockReturnValue({ listSets: vi.fn().mockResolvedValue([
-      { id: "tdx-ja-set-SV4a", language: "ja", name: "シャイニートレジャーex", releaseDate: "", cardCount: 190 },
+      { id: "tdx-ja-set-M5", language: "ja", name: "アビスアイ", releaseDate: "", cardCount: 190 },
     ]) } as unknown as CatalogWithSetPages);
 
     render(await EasternLanguageSetsPage({ params: Promise.resolve({ language: "japanese" }) }));
 
     expect(getEasternCatalog).toHaveBeenCalledWith("ja");
-    expect(screen.getByRole("link", { name: /シャイニートレジャーex/ })).toHaveAttribute("href", "/sets/eastern/japanese/tdx-ja-set-SV4a");
+    expect(screen.getByRole("link", { name: /アビスアイ/ })).toHaveAttribute("href", "/sets/eastern/japanese/tdx-ja-set-M5");
+    expect(screen.getByText("English (automatic): Abyss Eye")).toBeVisible();
     expect(screen.getByText("Japanese")).toBeVisible();
   });
 
