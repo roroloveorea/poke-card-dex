@@ -21,6 +21,14 @@ describe("English set directory", () => {
     expect(screen.getByRole("img", { name: "Newest logo" })).toBeVisible();
   });
 
+  it("uses a set symbol when no logo is available", async () => {
+    vi.mocked(getCatalog).mockReturnValue({ listSets: vi.fn().mockResolvedValue([
+      { id: "symbol", language: "en", name: "Symbol Set", releaseDate: "2026/01/01", symbolUrl: "symbol.png", cardCount: 12 },
+    ]) } as unknown as Catalog);
+    render(await SetsPage());
+    expect(screen.getByRole("img", { name: "Symbol Set symbol" })).toHaveAttribute("src", "symbol.png");
+  });
+
   it("distinguishes empty and retryable failure states", async () => {
     vi.mocked(getCatalog).mockReturnValue({ listSets: vi.fn().mockRejectedValue(new Error()) } as unknown as Catalog);
     const { rerender } = render(await SetsPage());

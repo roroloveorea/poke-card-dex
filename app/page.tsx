@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SearchForm } from "@/app/_components/search-form";
 import { getCatalog } from "@/src/catalog/server-catalog";
 import type { CatalogSet } from "@/src/catalog/catalog";
+import { SetGrid } from "@/app/_components/set-grid";
 
 export default async function HomePage() {
   let latestSets: CatalogSet[] = [];
@@ -16,7 +17,7 @@ export default async function HomePage() {
       <SearchForm />
       </section>
       <section className="latest-sets"><div className="section-heading"><div><p className="eyebrow">Latest releases</p><h2>New in the catalog</h2></div><Link className="text-link" href="/sets">Browse all sets</Link></div>
-      {setsUnavailable ? <div className="empty-state" role="alert">Latest sets are temporarily unavailable. <Link href="/">Try again</Link>.</div> : latestSets.length === 0 ? <p className="empty-state">No English sets are available right now.</p> : <ul className="set-grid">{latestSets.map((set) => <li key={set.id}><Link className="set-tile" href={`/sets/${set.id}`}><strong>{set.name}</strong><span>{set.releaseDate}</span>{set.cardCount !== undefined && <span>{set.cardCount} cards</span>}</Link></li>)}</ul>}
+      {setsUnavailable ? <div className="empty-state" role="alert">Latest sets are temporarily unavailable. <Link href="/">Try again</Link>.</div> : latestSets.length === 0 ? <p className="empty-state">No English sets are available right now.</p> : <SetGrid sets={latestSets} />}
       </section>
       <p className="disclaimer">PokeCardDex is an unofficial collector reference and is not affiliated with Nintendo, Creatures, Game Freak, or The Pokémon Company.</p>
     </div>

@@ -66,6 +66,7 @@ describe("Pokémon TCG catalog", () => {
     expect(card).toMatchObject({ rarity: "Rare Holo", artist: "Mitsuhiro Arita", hp: "120" });
     expect(card.priceQuotes).toEqual([
       { variant: "Holofoil", amount: 321.5, currency: "USD", source: "TCGplayer", observedAt: "2026/08/20", stale: true },
+      { variant: "Reverse holofoil", amount: undefined, currency: "USD", source: "TCGplayer", observedAt: "2026/08/20", stale: true },
     ]);
     expect(card.summaryPrice?.variant).toBe("Holofoil");
   });

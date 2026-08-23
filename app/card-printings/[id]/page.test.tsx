@@ -35,7 +35,8 @@ describe("exact card-printing page", () => {
     expect(screen.getByRole("img", { name: "Charizard from Base, card 4" })).toBeVisible();
     expect(screen.getByText("Rare Holo")).toBeVisible();
     expect(screen.getByText("Mitsuhiro Arita")).toBeVisible();
-    expect(screen.getByText("$321.50")).toBeVisible();
+    expect(screen.getByText("$321.50 USD")).toBeVisible();
+    expect(screen.getByText(/August 20, 2026/)).toBeVisible();
     expect(screen.getByText(/indicative/i)).toBeVisible();
   });
 

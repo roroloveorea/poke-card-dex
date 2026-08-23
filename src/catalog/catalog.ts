@@ -12,7 +12,7 @@ export type CatalogSet = {
 
 export type PriceQuote = {
   variant: string;
-  amount: number;
+  amount?: number;
   currency: "USD" | "JPY";
   source: string;
   observedAt: string;
@@ -32,6 +32,11 @@ export type CardPrinting = {
   hp?: string;
   types?: string[];
   rules?: string[];
+  abilities?: { name: string; text: string }[];
+  attacks?: { name: string; text?: string; damage?: string; cost?: string[] }[];
+  weaknesses?: { type: string; value: string }[];
+  resistances?: { type: string; value: string }[];
+  retreatCost?: string[];
   priceQuotes: PriceQuote[];
   summaryPrice?: PriceQuote;
 };

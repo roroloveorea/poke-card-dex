@@ -2,9 +2,14 @@ import type { Catalog, CardPrinting, CatalogSet, PriceQuote } from "./catalog";
 
 type ProviderSet = { id: string; name: string; releaseDate: string; total?: number; images?: { logo?: string; symbol?: string } };
 type ProviderPrice = { market?: number };
+type ProviderAbility = { name: string; text: string };
+type ProviderAttack = { name: string; text?: string; damage?: string; cost?: string[] };
+type ProviderTypeValue = { type: string; value: string };
 type ProviderCard = {
   id: string; name: string; number: string; images?: { large?: string; small?: string }; set: ProviderSet;
   rarity?: string; artist?: string; supertype?: string; hp?: string; types?: string[]; rules?: string[];
+  abilities?: ProviderAbility[]; attacks?: ProviderAttack[]; weaknesses?: ProviderTypeValue[];
+  resistances?: ProviderTypeValue[]; retreatCost?: string[];
   tcgplayer?: { updatedAt?: string; prices?: Record<string, ProviderPrice> };
 };
 type ProviderResponse = { ok: boolean; json(): Promise<{ data: unknown; count?: number; totalCount?: number }> };
@@ -13,6 +18,7 @@ type RequestCatalog = (url: string, init: { headers: Record<string, string>; sig
 const variantNames: Record<string, string> = {
   normal: "Normal", holofoil: "Holofoil", reverseHolofoil: "Reverse holofoil", "1stEditionHolofoil": "1st Edition holofoil",
 };
+const summaryVariantPriority = ["normal", "holofoil", "reverseHolofoil", "1stEditionHolofoil"];
 
 export class CatalogUnavailableError extends Error {
   constructor() {
@@ -28,11 +34,12 @@ function mapSet(set: ProviderSet): CatalogSet {
 function mapQuotes(card: ProviderCard): PriceQuote[] {
   const observedAt = card.tcgplayer?.updatedAt;
   if (!observedAt) return [];
-  return Object.entries(card.tcgplayer?.prices ?? {}).flatMap(([variant, price]) =>
-    typeof price.market === "number" && price.market > 0
-      ? [{ variant: variantNames[variant] ?? variant, amount: price.market, currency: "USD" as const, source: "TCGplayer", observedAt, stale: Date.now() - new Date(observedAt.replaceAll("/", "-")).getTime() > 86_400_000 }]
-      : [],
-  );
+  return Object.entries(card.tcgplayer?.prices ?? {}).map(([variant, price]) => ({
+    variant: variantNames[variant] ?? variant,
+    amount: typeof price.market === "number" && price.market > 0 ? price.market : undefined,
+    currency: "USD" as const, source: "TCGplayer", observedAt,
+    stale: Date.now() - new Date(observedAt.replaceAll("/", "-")).getTime() > 86_400_000,
+  }));
 }
 
 function mapCard(card: ProviderCard): CardPrinting {
@@ -41,7 +48,12 @@ function mapCard(card: ProviderCard): CardPrinting {
     id: card.id, language: "en", name: card.name, collectorNumber: card.number,
     imageUrl: card.images?.large ?? card.images?.small, set: mapSet(card.set), rarity: card.rarity,
     artist: card.artist, supertype: card.supertype, hp: card.hp, types: card.types, rules: card.rules,
-    priceQuotes, summaryPrice: priceQuotes[0],
+    abilities: card.abilities, attacks: card.attacks, weaknesses: card.weaknesses,
+    resistances: card.resistances, retreatCost: card.retreatCost, priceQuotes,
+    summaryPrice: summaryVariantPriority.map((variant) => {
+      const name = variantNames[variant] ?? variant;
+      return priceQuotes.find((quote) => quote.variant === name && quote.amount !== undefined);
+    }).find(Boolean) ?? priceQuotes.find((quote) => quote.amount !== undefined),
   };
 }
 

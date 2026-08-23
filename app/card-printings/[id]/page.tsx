@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { getCatalog } from "@/src/catalog/server-catalog";
-import { Price } from "@/app/_components/price";
+import { ObservationDate, Price } from "@/app/_components/price";
 
 export default async function CardPrintingPage({
   params,
@@ -55,9 +55,14 @@ export default async function CardPrintingPage({
           {cardPrinting.types?.length ? <div><dt>Type</dt><dd>{cardPrinting.types.join(", ")}</dd></div> : null}
         </dl>
         {cardPrinting.rules?.length ? <section><h2>Card rules</h2>{cardPrinting.rules.map((rule) => <p key={rule}>{rule}</p>)}</section> : null}
+        {cardPrinting.abilities?.length ? <section><h2>Abilities</h2>{cardPrinting.abilities.map((ability) => <div key={ability.name}><h3>{ability.name}</h3><p>{ability.text}</p></div>)}</section> : null}
+        {cardPrinting.attacks?.length ? <section><h2>Attacks</h2>{cardPrinting.attacks.map((attack) => <div key={attack.name}><h3>{attack.name}{attack.damage ? ` · ${attack.damage}` : ""}</h3>{attack.cost?.length ? <p>Cost: {attack.cost.join(", ")}</p> : null}{attack.text && <p>{attack.text}</p>}</div>)}</section> : null}
+        {cardPrinting.weaknesses?.length ? <p><strong>Weakness:</strong> {cardPrinting.weaknesses.map((item) => `${item.type} ${item.value}`).join(", ")}</p> : null}
+        {cardPrinting.resistances?.length ? <p><strong>Resistance:</strong> {cardPrinting.resistances.map((item) => `${item.type} ${item.value}`).join(", ")}</p> : null}
+        {cardPrinting.retreatCost?.length ? <p><strong>Retreat cost:</strong> {cardPrinting.retreatCost.join(", ")}</p> : null}
         <section className="prices" aria-labelledby="prices-heading">
           <h2 id="prices-heading">Ungraded prices</h2>
-          {cardPrinting.priceQuotes.length === 0 ? <p>Price unavailable</p> : <ul>{cardPrinting.priceQuotes.map((quote) => <li key={quote.variant}><strong>{quote.variant}</strong><Price quote={quote} /><small>{quote.source} · observed {quote.observedAt}{quote.stale ? " · Stale quote" : ""}</small></li>)}</ul>}
+          {cardPrinting.priceQuotes.length === 0 ? <p>Price unavailable</p> : <ul>{cardPrinting.priceQuotes.map((quote) => <li key={quote.variant}><strong>{quote.variant}</strong><Price quote={quote} /><small>{quote.source} · observed <ObservationDate value={quote.observedAt} />{quote.stale ? " · Stale quote" : ""}</small></li>)}</ul>}
           <p className="disclaimer">Prices are indicative market quotes, not guaranteed sale values.</p>
         </section>
       </div>
