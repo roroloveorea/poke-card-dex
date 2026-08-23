@@ -2,6 +2,8 @@
 
 PokeCardDex is a website for discovering Pokémon trading cards, exploring every released set, and checking the latest available market prices. It combines the familiar browsing experience of a Pokédex with practical tools for collectors.
 
+![PokeCardDex homepage showing card search and the Pokémon card archive](docs/images/pokecarddex-home-preview.webp)
+
 ## Vision
 
 Create a fast, attractive, and easy-to-use reference where collectors can:
@@ -92,8 +94,11 @@ Verification commands:
 
 ```bash
 npm test
+npm run test:e2e
 npm run typecheck
 npm run verify:browser-safety
 ```
+
+The Pokémon-inspired theme tokens and reusable component states are demonstrated at `/design-system`.
 
 See the [Catalog MVP verification procedure](docs/verification/catalog-mvp.md) for browser checks and the current Japanese-provider blocker.
