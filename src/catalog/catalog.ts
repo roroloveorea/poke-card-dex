@@ -13,7 +13,7 @@ export type CatalogSet = {
 export type PriceQuote = {
   variant: string;
   amount?: number;
-  currency: "USD" | "JPY";
+  currency: "USD" | "JPY" | "EUR";
   source: string;
   observedAt: string;
   stale: boolean;

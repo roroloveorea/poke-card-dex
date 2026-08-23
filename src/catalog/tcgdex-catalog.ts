@@ -1,4 +1,4 @@
-import type { CardPrinting, CatalogSet, Language } from "./catalog";
+import type { CardPrinting, CatalogSet, Language, PriceQuote } from "./catalog";
 import type { CatalogWithSetPages } from "./rarebit-catalog";
 import { normalizeSearchQuery } from "./search-query";
 
@@ -21,9 +21,19 @@ type CardDetail = CardSummary & {
   weaknesses?: { type: string; value?: string }[];
   resistances?: { type: string; value?: string }[];
   retreat?: number;
+  variants?: { holo?: boolean; normal?: boolean; reverse?: boolean };
+  pricing?: {
+    cardmarket?: {
+      updated?: string;
+      unit?: string;
+      avg?: number | null;
+      "avg-holo"?: number | null;
+    } | null;
+  };
 };
 
 const REQUEST_TIMEOUT_MS = 8_000;
+const DAY_MS = 86_400_000;
 
 export class TcgDexUnavailableError extends Error {
   constructor() {
@@ -57,21 +67,46 @@ function mapSet(set: SetSummary | SetDetail, language: EasternLanguage): Catalog
   };
 }
 
+function cardImageUrl(image: string | undefined, quality: "low" | "high") {
+  if (!image) return undefined;
+  if (/\/(?:low|high)\.(?:webp|png|jpe?g)$/i.test(image)) return image;
+  return `${image.replace(/\/+$/, "")}/${quality}.webp`;
+}
+
+function mapCardmarketQuotes(card: CardDetail): PriceQuote[] {
+  const market = card.pricing?.cardmarket;
+  if (!market || market.unit !== "EUR" || !market.updated) return [];
+  const stale = Date.now() - new Date(market.updated).getTime() > DAY_MS;
+  return [
+    { variant: "Normal · Average", amount: market.avg },
+    { variant: "Holo · Average", amount: market["avg-holo"] },
+  ].flatMap(({ variant, amount }) => typeof amount === "number" && amount > 0 ? [{
+    variant,
+    amount,
+    currency: "EUR" as const,
+    source: "Cardmarket via TCGdex",
+    observedAt: market.updated as string,
+    stale,
+  }] : []);
+}
+
 function mapCardSummary(card: CardSummary, set: CatalogSet, language: EasternLanguage): CardPrinting {
   return {
     id: `${cardPrefix(language)}${card.id}`,
     language,
     name: card.name,
     collectorNumber: card.localId,
-    imageUrl: card.image,
+    imageUrl: cardImageUrl(card.image, "low"),
     set,
     priceQuotes: [],
   };
 }
 
-function mapCardDetail(card: CardDetail, set: CatalogSet, language: EasternLanguage): CardPrinting {
+function mapCardDetail(card: CardDetail, set: CatalogSet, language: EasternLanguage, imageQuality: "low" | "high" = "high"): CardPrinting {
+  const priceQuotes = mapCardmarketQuotes(card);
   return {
     ...mapCardSummary(card, set, language),
+    imageUrl: cardImageUrl(card.image, imageQuality),
     artist: card.illustrator,
     supertype: card.category,
     hp: card.hp === undefined ? undefined : String(card.hp),
@@ -86,6 +121,8 @@ function mapCardDetail(card: CardDetail, set: CatalogSet, language: EasternLangu
     weaknesses: card.weaknesses?.map((weakness) => ({ type: weakness.type, value: weakness.value ?? "" })),
     resistances: card.resistances?.map((resistance) => ({ type: resistance.type, value: resistance.value ?? "" })),
     retreatCost: card.retreat === undefined ? undefined : Array.from({ length: card.retreat }, () => "Colorless"),
+    priceQuotes,
+    summaryPrice: priceQuotes[0],
   };
 }
 
@@ -140,9 +177,17 @@ export function createTcgdexCatalog({ language, request, baseUrl = "https://api.
       const safePageSize = Math.min(50, Math.max(1, Math.trunc(pageSize) || 12));
       const setDetail = await getSetDetail(setId);
       const set = mapSet(setDetail, language);
-      const cards = (setDetail.cards ?? []).map((card) => mapCardSummary(card, set, language));
       const start = (safePage - 1) * safePageSize;
-      return { items: cards.slice(start, start + safePageSize), page: safePage, pageSize: safePageSize, totalCount: cards.length, quotedCount: 0 };
+      const cardSummaries = setDetail.cards ?? [];
+      const visibleSummaries = cardSummaries.slice(start, start + safePageSize);
+      const items = await Promise.all(visibleSummaries.map(async (summary) => {
+        try {
+          return mapCardDetail(await requestJson<CardDetail>(`cards/${encodeURIComponent(summary.id)}`), set, language, "low");
+        } catch {
+          return mapCardSummary(summary, set, language);
+        }
+      }));
+      return { items, page: safePage, pageSize: safePageSize, totalCount: cardSummaries.length, quotedCount: items.filter((card) => card.summaryPrice).length };
     },
     async listCardPrintings(setId) {
       const setDetail = await getSetDetail(setId);

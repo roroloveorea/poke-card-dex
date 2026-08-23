@@ -24,26 +24,36 @@ describe("TCGdex Eastern catalog adapter", () => {
     ]);
   });
 
-  it("renders the cards in a Korean set without inventing prices", async () => {
+  it("enriches the visible cards in a Korean set with images and Cardmarket prices", async () => {
     const request = vi.fn(async (url: string) => {
-      expect(url).toBe("https://api.tcgdex.net/v2/ko/sets/SV5M");
-      return response({
+      if (url.endsWith("/sets/SV5M")) return response({
         id: "SV5M",
         name: "사이버저지",
         releaseDate: "2024-01-26",
         cardCount: { total: 71, official: 71 },
         cards: [{ id: "SV5M-001", localId: "001", name: "도토링", image: "https://assets.test/001" }],
       });
+      if (url.endsWith("/cards/SV5M-001")) return response({
+        id: "SV5M-001", localId: "001", name: "도토링", image: "https://assets.test/001",
+        set: { id: "SV5M", name: "사이버저지", cardCount: { total: 71, official: 71 } },
+        pricing: { cardmarket: { updated: "2026-08-24T00:00:00.000Z", unit: "EUR", avg: 0.05, "avg-holo": null } },
+      });
+      throw new Error(`Unexpected URL: ${url}`);
     });
 
     const page = await createTcgdexCatalog({ language: "ko", request }).getCardPrintingPage("tdx-ko-set-SV5M", 1, 12);
 
     expect(page).toEqual({
-      items: [expect.objectContaining({ id: "tdx-ko-card-SV5M-001", language: "ko", name: "도토링", collectorNumber: "001", imageUrl: "https://assets.test/001", priceQuotes: [] })],
+      items: [expect.objectContaining({
+        id: "tdx-ko-card-SV5M-001", language: "ko", name: "도토링", collectorNumber: "001",
+        imageUrl: "https://assets.test/001/low.webp",
+        priceQuotes: [expect.objectContaining({ variant: "Normal · Average", amount: 0.05, currency: "EUR", source: "Cardmarket via TCGdex" })],
+        summaryPrice: expect.objectContaining({ amount: 0.05, currency: "EUR" }),
+      })],
       page: 1,
       pageSize: 12,
       totalCount: 1,
-      quotedCount: 0,
+      quotedCount: 1,
     });
   });
 
@@ -64,10 +74,30 @@ describe("TCGdex Eastern catalog adapter", () => {
 
     expect(card).toEqual(expect.objectContaining({
       language: "zh-tw", name: "木木梟", supertype: "Pokemon", hp: "60", artist: "Artist",
+      imageUrl: "card-image/high.webp",
       abilities: [{ name: "特性", text: "效果" }],
       attacks: [{ name: "攻擊", text: "說明", damage: "20", cost: ["Grass"] }],
       retreatCost: ["Colorless"], priceQuotes: [],
       set: expect.objectContaining({ id: "tdx-zh-tw-set-SC2D", releaseDate: "2020-06-19" }),
     }));
+  });
+
+  it("keeps a card usable when TCGdex has neither artwork nor market pricing", async () => {
+    const request = vi.fn(async (url: string) => {
+      if (url.endsWith("/sets/M5")) return response({
+        id: "M5", name: "アビスアイ", cardCount: { total: 1, official: 1 },
+        cards: [{ id: "M5-001", localId: "001", name: "トロピウス" }],
+      });
+      if (url.endsWith("/cards/M5-001")) return response({
+        id: "M5-001", localId: "001", name: "トロピウス",
+        set: { id: "M5", name: "アビスアイ", cardCount: { total: 1, official: 1 } },
+      });
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+
+    const page = await createTcgdexCatalog({ language: "ja", request }).getCardPrintingPage("tdx-ja-set-M5", 1, 24);
+
+    expect(page.items[0]).toEqual(expect.objectContaining({ imageUrl: undefined, priceQuotes: [], summaryPrice: undefined }));
+    expect(page.quotedCount).toBe(0);
   });
 });
