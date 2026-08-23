@@ -51,6 +51,7 @@ export default async function CardPrintingPage({
           </div>
           {cardPrinting.rarity && <div><dt>Rarity</dt><dd>{cardPrinting.rarity}</dd></div>}
           {cardPrinting.artist && <div><dt>Artist</dt><dd>{cardPrinting.artist}</dd></div>}
+          {cardPrinting.supertype && <div><dt>Card type</dt><dd>{cardPrinting.supertype}</dd></div>}
           {cardPrinting.hp && <div><dt>HP</dt><dd>{cardPrinting.hp}</dd></div>}
           {cardPrinting.types?.length ? <div><dt>Type</dt><dd>{cardPrinting.types.join(", ")}</dd></div> : null}
         </dl>

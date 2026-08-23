@@ -98,7 +98,7 @@ export function createPokemonTcgCatalog({ request, apiKey, timeoutMs = 8_000, pa
   return {
     async listSets() {
       return (await allPages<ProviderSet>("sets")).map(mapSet)
-        .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate) || a.name.localeCompare(b.name));
+        .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
     },
     async getSet(id) { return mapSet((await requestData<ProviderSet>(`sets/${encodeURIComponent(id)}`)).data); },
     async listCardPrintings(setId) {

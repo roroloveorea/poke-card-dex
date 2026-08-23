@@ -53,6 +53,14 @@ describe("Pokémon TCG catalog", () => {
     expect(request).toHaveBeenCalledTimes(2);
   });
 
+  it("uses set id as the final deterministic ordering tie-breaker", async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({
+      data: [{ id: "z", name: "Same", releaseDate: "2026/01/01" }, { id: "a", name: "Same", releaseDate: "2026/01/01" }], count: 2, totalCount: 2,
+    }) });
+    const sets = await createPokemonTcgCatalog({ request, apiKey: "secret" }).listSets();
+    expect(sets.map((set) => set.id)).toEqual(["a", "z"]);
+  });
+
   it("maps optional details and separate ungraded USD variant quotes", async () => {
     const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: {
       id: "base1-4", name: "Charizard", number: "4", rarity: "Rare Holo", artist: "Mitsuhiro Arita",
