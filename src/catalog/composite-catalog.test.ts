@@ -38,4 +38,20 @@ describe("composite catalog", () => {
     );
     expect(await combined.searchCardPrintings("charizard")).toEqual([englishCard]);
   });
+
+  it("deduplicates and ranks the combined public result set without merging languages", async () => {
+    const old = { id: "old", language: "en" as const, name: "Charizard ex", collectorNumber: "10", set: { id: "old-set", language: "en" as const, name: "Rocket", releaseDate: "2020-01-01" }, priceQuotes: [] };
+    const exact = { ...old, id: "same", name: "Charizard", set: { ...old.set, id: "new-set", releaseDate: "2026-01-01" } };
+    const japanese = { ...exact, language: "ja" as const, set: { ...exact.set, language: "ja" as const } };
+    const combined = createCompositeCatalog(
+      catalog({ searchCardPrintings: vi.fn(async () => [old, exact, exact]) }),
+      catalog({ searchCardPrintings: vi.fn(async () => [japanese]) }),
+    );
+
+    expect((await combined.searchCardPrintings("charizard")).map((card) => `${card.language}:${card.id}`)).toEqual([
+      "en:same",
+      "ja:same",
+      "en:old",
+    ]);
+  });
 });

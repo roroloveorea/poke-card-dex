@@ -13,8 +13,21 @@ describe("Home", () => {
     ]) } as unknown as Catalog);
     render(await HomePage());
     expect(screen.getByRole("search")).toBeVisible();
-    expect(screen.getByPlaceholderText(/card name or collector number/i)).toBeVisible();
+    expect(screen.getByPlaceholderText(/name, number, or set/i)).toBeVisible();
     expect(screen.getByRole("link", { name: /Newest/ })).toHaveAttribute("href", "/sets/new");
     expect(screen.getByText(/unofficial collector reference/i)).toBeVisible();
+    const heroArtwork = document.querySelector(".hero-artwork img");
+    expect(heroArtwork).toHaveAttribute("alt", "");
+    expect(heroArtwork).toHaveAttribute("width", "1248");
+    expect(heroArtwork).toHaveAttribute("height", "832");
+  });
+
+  it("uses a themed, accessible empty state when no sets are available", async () => {
+    vi.mocked(getCatalog).mockReturnValue({ listSets: vi.fn().mockResolvedValue([]) } as unknown as Catalog);
+
+    render(await HomePage());
+
+    expect(screen.getByText(/no sets are available/i)).toBeVisible();
+    expect(document.querySelector(".empty-state [aria-hidden='true']")).toBeInTheDocument();
   });
 });

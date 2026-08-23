@@ -1,15 +1,16 @@
 import type { Catalog } from "./catalog";
 import type { CatalogWithSetPages } from "./rarebit-catalog";
+import { rankAndDeduplicateSearchResults } from "./search-query";
 
 const RAREBIT_CARD_PREFIX = "rb-card-";
 const RAREBIT_SET_PREFIX = "rb-set-";
 
-async function mergeAvailable<T extends { id: string }>(calls: [Promise<T[]>, Promise<T[]>]) {
+async function mergeAvailable<T extends { id: string; language?: string }>(calls: [Promise<T[]>, Promise<T[]>]) {
   const results = await Promise.allSettled(calls);
   const available = results.flatMap((result) => result.status === "fulfilled" ? result.value : []);
   const firstRejection = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
   if (results.every((result) => result.status === "rejected")) throw firstRejection?.reason;
-  return [...new Map(available.map((item) => [item.id, item])).values()];
+  return [...new Map(available.map((item) => [`${item.language ?? ""}:${item.id}`, item])).values()];
 }
 
 export function createCompositeCatalog(primary: Catalog, japanese: CatalogWithSetPages): CatalogWithSetPages {
@@ -32,8 +33,12 @@ export function createCompositeCatalog(primary: Catalog, japanese: CatalogWithSe
     listCardPrintings(id) {
       return setCatalog(id).listCardPrintings(id);
     },
-    searchCardPrintings(query) {
-      return mergeAvailable([primary.searchCardPrintings(query), japanese.searchCardPrintings(query)]);
+    async searchCardPrintings(query) {
+      return rankAndDeduplicateSearchResults(
+        await mergeAvailable([primary.searchCardPrintings(query), japanese.searchCardPrintings(query)]),
+        query,
+        { filter: false },
+      );
     },
     getCardPrinting(id) {
       return cardCatalog(id).getCardPrinting(id);

@@ -1,5 +1,7 @@
+import "server-only";
+
 import type { Catalog, CardPrinting, CatalogSet, PriceQuote } from "./catalog";
-import { normalizeSearchQuery } from "./search-query";
+import { normalizeSearchQuery, rankAndDeduplicateSearchResults, searchQueryTerms } from "./search-query";
 
 type RareBitResponse = { ok: boolean; json(): Promise<unknown> };
 type RareBitRequest = (url: string, init: { headers: Record<string, string>; signal: AbortSignal }) => Promise<RareBitResponse>;
@@ -53,6 +55,7 @@ type RareBitPrice = {
   capturedAt: string;
 };
 type RareBitCurrentPrices = { sources?: RareBitPrice[] };
+type RareBitPriceResponse = RareBitCurrentPrices | { data: RareBitCurrentPrices };
 type PriceOrder = "price-high" | "price-low";
 
 export type CatalogWithSetPages = Catalog & {
@@ -218,6 +221,34 @@ export function createRareBitCatalog({ request, apiKey, timeoutMs = 8_000, baseU
     return { cards: await enrichCards(response.data), pagination: response.pagination };
   }
 
+  async function everySearchCandidate(term: string) {
+    const cards: CardPrinting[] = [];
+    let offset = 0;
+    do {
+      const page = await listCards(new URLSearchParams({ q: term, limit: "100", offset: String(offset) }));
+      cards.push(...page.cards);
+      const pagination = page.pagination;
+      if (!pagination?.hasMore) break;
+      const nextOffset = offset + pagination.limit;
+      if (pagination.limit <= 0 || nextOffset <= offset) break;
+      offset = nextOffset;
+    } while (true);
+    return cards;
+  }
+
+  async function addAvailableSearchPrices(cards: CardPrinting[]) {
+    return Promise.all(cards.map(async (card) => {
+      try {
+        const response = await requestJson<RareBitPriceResponse>(`prices/CARD/${encodeURIComponent(providerCardId(card.id))}/current`);
+        const prices = "data" in response ? response.data : response;
+        const priceQuotes = mapYuYuTeiQuotes(prices);
+        return { ...card, priceQuotes, summaryPrice: priceQuotes.find((quote) => quote.amount !== undefined) };
+      } catch {
+        return card;
+      }
+    }));
+  }
+
   async function everyCardInSet(setCode: string, rarity?: string) {
     const cards: CardPrinting[] = [];
     let offset = 0;
@@ -268,7 +299,9 @@ export function createRareBitCatalog({ request, apiKey, timeoutMs = 8_000, baseU
     async searchCardPrintings(query) {
       const normalized = normalizeSearchQuery(query);
       if (!normalized) return [];
-      return (await listCards(new URLSearchParams({ q: normalized, limit: "20", offset: "0" }))).cards;
+      const terms = [...new Set(searchQueryTerms(normalized))];
+      const candidates = (await Promise.all(terms.map(everySearchCandidate))).flat();
+      return addAvailableSearchPrices(rankAndDeduplicateSearchResults(candidates, normalized));
     },
     async getCardPrinting(id) {
       const providerId = providerCardId(id);

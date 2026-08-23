@@ -1,5 +1,5 @@
 import type { Catalog, CardPrinting, CatalogSet, PriceOrder, PriceQuote } from "./catalog";
-import { searchQueryTerms } from "./search-query";
+import { rankAndDeduplicateSearchResults, searchQueryTerms } from "./search-query";
 
 type ProviderSet = { id: string; name: string; releaseDate: string; total?: number; images?: { logo?: string; symbol?: string } };
 type ProviderPrice = { market?: number };
@@ -184,15 +184,10 @@ export function createPokemonTcgCatalog({ request, apiKey, timeoutMs = 8_000, pa
       if (terms.length === 0) return [];
       const providerQuery = terms.map((term) => {
         const safeTerm = escapeLuceneQueryTerm(term);
-        return `(name:*${safeTerm}* OR number:${safeTerm}*)`;
+        return `(name:*${safeTerm}* OR number:${safeTerm}* OR set.name:*${safeTerm}*)`;
       }).join(" AND ");
       const cards = await resilientCardPages(providerQuery);
-      const normalizedTerms = terms.map((term) => term.toLocaleLowerCase());
-      return cards.filter((card) => {
-        const name = card.name.toLocaleLowerCase();
-        const collectorNumber = card.collectorNumber.toLocaleLowerCase();
-        return normalizedTerms.every((term) => name.includes(term) || collectorNumber.startsWith(term));
-      });
+      return rankAndDeduplicateSearchResults(cards, query);
     },
     async getCardPrinting(id) { return mapCard((await requestData<ProviderCard>(`cards/${encodeURIComponent(id)}`)).data); },
   };

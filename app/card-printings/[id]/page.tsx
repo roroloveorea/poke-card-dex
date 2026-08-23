@@ -2,7 +2,8 @@ import Link from "next/link";
 
 import { getCatalog } from "@/src/catalog/server-catalog";
 import { ObservationDate, Price } from "@/app/_components/price";
-import { languageName } from "@/src/catalog/language";
+import { CatalogImage } from "@/app/_components/catalog-image";
+import { LanguageBadge } from "@/app/_components/language-badge";
 
 export default async function CardPrintingPage({
   params,
@@ -33,14 +34,9 @@ export default async function CardPrintingPage({
 
   return (
     <article className="card-shell">
-      {cardPrinting.imageUrl && <div className="card-artwork">
-        <img
-          src={cardPrinting.imageUrl}
-          alt={`${cardPrinting.name} from ${cardPrinting.set.name}, card ${cardPrinting.collectorNumber}`}
-        />
-      </div>}
+      <div className="card-artwork"><CatalogImage src={cardPrinting.imageUrl} alt={`${cardPrinting.name} from ${cardPrinting.set.name}, card ${cardPrinting.collectorNumber}`} kind="card" eager /></div>
       <div className="card-copy">
-        <p className="eyebrow">{languageName(cardPrinting.language)}</p>
+        <div className="detail-kicker"><LanguageBadge language={cardPrinting.language} /></div>
         <h1>{cardPrinting.name}</h1>
         <p className="printing-id">
           {cardPrinting.set.name} · {cardPrinting.collectorNumber}

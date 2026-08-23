@@ -109,7 +109,7 @@ describe("Pokémon TCG catalog", () => {
     await expect(catalog.listCardPrintings("base1")).resolves.toHaveLength(1);
     await expect(catalog.searchCardPrintings("  ChAr  ")).resolves.toHaveLength(1);
     expect(request.mock.calls[0][0]).toContain(encodeURIComponent('set.id:"base1"'));
-    expect(new URL(request.mock.calls[1][0]).searchParams.get("q")).toBe("(name:*ChAr* OR number:ChAr*)");
+    expect(new URL(request.mock.calls[1][0]).searchParams.get("q")).toBe("(name:*ChAr* OR number:ChAr* OR set.name:*ChAr*)");
   });
 
   it("matches every normalized search term across card name or collector-number prefix", async () => {
@@ -130,6 +130,28 @@ describe("Pokémon TCG catalog", () => {
     const providerQuery = new URL(request.mock.calls[0][0]).searchParams.get("q");
     expect(providerQuery).toContain("name:*CHARIZARD*");
     expect(providerQuery).toContain("number:01*");
+  });
+
+  it("matches combined terms across card and set identity through every provider page", async () => {
+    const request = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        data: [{ id: "wrong-set", name: "Charizard", number: "01", images: {}, set: { id: "base", name: "Base Set", releaseDate: "1999/01/09" } }],
+        count: 1,
+        totalCount: 2,
+      }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        data: [{ id: "match", name: "Charizard", number: "01", images: {}, set: { id: "rocket", name: "Team Rocket", releaseDate: "2000/04/24" } }],
+        count: 1,
+        totalCount: 2,
+      }) });
+    const catalog = createPokemonTcgCatalog({ request, apiKey: "secret", pageSize: 1 });
+
+    await expect(catalog.searchCardPrintings("01 ROCKET charizard")).resolves.toEqual([
+      expect.objectContaining({ id: "match" }),
+    ]);
+    expect(request).toHaveBeenCalledTimes(2);
+    const providerQuery = new URL(request.mock.calls[0][0]).searchParams.get("q");
+    expect(providerQuery).toContain("set.name:*ROCKET*");
   });
 
   it("preserves meaningful letters and punctuation in collector-number-only searches", async () => {

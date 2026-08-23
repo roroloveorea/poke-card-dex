@@ -14,7 +14,8 @@ describe("English catalog search", () => {
     render(await SearchPage({ searchParams: Promise.resolve({ q: "  ChAr  " }) }));
     expect(searchCardPrintings).toHaveBeenCalledWith("ChAr");
     expect(screen.getByRole("heading", { name: /results for “ChAr”/i })).toBeVisible();
-    expect(screen.getByText("English · Base · 4")).toBeVisible();
+    expect(screen.getByText("English")).toBeVisible();
+    expect(screen.getByText("Base · 4")).toBeVisible();
     expect(screen.getByText("Price unavailable")).toBeVisible();
   });
 
@@ -38,7 +39,8 @@ describe("English catalog search", () => {
     expect(searchCardPrintings).toHaveBeenCalledWith("charizard 01");
     expect(screen.getByDisplayValue("charizard 01")).toBeVisible();
     expect(screen.getByRole("link", { name: /Charizard ex/i })).toHaveAttribute("href", "/card-printings/set-a-01a");
-    expect(screen.getByText("English · Alpha · 01a")).toBeVisible();
+    expect(screen.getByText("English")).toBeVisible();
+    expect(screen.getByText("Alpha · 01a")).toBeVisible();
   });
 
   it("keeps query, search, navigation, and retry available after failure", async () => {
@@ -58,7 +60,8 @@ describe("English catalog search", () => {
 
     render(await SearchPage({ searchParams: Promise.resolve({ q: "リザードン" }) }));
 
-    expect(screen.getByText("Japanese · ポケモンカード151 · 006/165")).toBeVisible();
+    expect(screen.getByText("Japanese")).toBeVisible();
+    expect(screen.getByText("ポケモンカード151 · 006/165")).toBeVisible();
     expect(screen.getByRole("link", { name: /リザードン/ })).toHaveAttribute("href", "/card-printings/rb-card-uuid");
   });
 });
