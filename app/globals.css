@@ -75,10 +75,21 @@ ul { padding: 0; list-style: none; }
 .prices li { display: grid; grid-template-columns: 1fr auto; gap: .25rem 1rem; padding-bottom: .75rem; border-bottom: 1px solid var(--line); }
 .prices small { grid-column: 1 / -1; color: var(--muted); }
 .disclaimer { color: var(--muted); font-size: .85rem; line-height: 1.5; }
+.page-status, .filter-note { color: var(--muted); }
+.pagination { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 2rem; }
+.page-numbers { display: flex; justify-content: center; gap: .35rem; flex: 1; flex-wrap: wrap; }
+.page-numbers a, .current-page { display: grid; min-width: 2.4rem; min-height: 2.4rem; padding: .45rem; place-items: center; border: 1px solid var(--line); border-radius: .35rem; color: inherit; font-weight: 700; text-decoration: none; }
+.current-page { border-color: var(--ink); background: var(--ink); color: white; }
+.rarity-filter { display: flex; align-items: end; gap: .75rem; margin: 1.5rem 0; }
+.rarity-filter label { display: grid; gap: .4rem; font-weight: 700; }
+.page-controls { grid-template-columns: 2fr 1fr; }
 
 @media (max-width: 42rem) {
   .card-shell { grid-template-columns: 1fr; }
   .card-artwork { width: min(100%, 24rem); margin: 0 auto; }
   .catalog-controls { grid-template-columns: 1fr; }
   .section-heading, .search-row { align-items: stretch; flex-direction: column; }
+  .rarity-filter { align-items: stretch; flex-direction: column; }
+  .pagination { align-items: stretch; flex-direction: column; }
+  .pagination > .button, .pagination > .text-link { text-align: center; }
 }

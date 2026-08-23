@@ -61,6 +61,26 @@ describe("Pokémon TCG catalog", () => {
     expect(sets.map((set) => set.id)).toEqual(["a", "z"]);
   });
 
+  it("falls back to a set-id query when the provider's direct set endpoint fails", async () => {
+    const request = vi.fn()
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        data: [{ id: "me5", name: "Pitch Black", releaseDate: "2026/07/17", total: 120 }],
+        count: 1,
+        totalCount: 1,
+      }) });
+    const catalog = createPokemonTcgCatalog({ request, apiKey: "secret" });
+
+    await expect(catalog.getSet("me5")).resolves.toMatchObject({
+      id: "me5", name: "Pitch Black", cardCount: 120,
+    });
+    expect(request.mock.calls[5][0]).toContain(encodeURIComponent('id:"me5"'));
+  });
+
   it("maps optional details and separate ungraded USD variant quotes", async () => {
     const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: {
       id: "base1-4", name: "Charizard", number: "4", rarity: "Rare Holo", artist: "Mitsuhiro Arita",
@@ -125,6 +145,82 @@ describe("Pokémon TCG catalog", () => {
       expect.objectContaining({ id: "match", collectorNumber: "TG01-a" }),
     ]);
     expect(new URL(request.mock.calls[0][0]).searchParams.get("q")).toContain("number:tg01\\-*");
+  });
+
+  it("retries card listings in smaller pages when a large provider page fails", async () => {
+    const request = vi.fn()
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        data: [{ id: "me3-1", name: "Bulbasaur", number: "1", images: {}, set: { id: "me3", name: "Perfect Order", releaseDate: "2026/03/27" } }],
+        count: 1, totalCount: 1,
+      }) });
+    const catalog = createPokemonTcgCatalog({ request, apiKey: "secret" });
+
+    await expect(catalog.listCardPrintings("me3")).resolves.toHaveLength(1);
+    expect(request.mock.calls[0][0]).toContain("pageSize=250");
+    expect(request.mock.calls[5][0]).toContain("pageSize=50");
+  });
+
+  it("returns one bounded card page with reachability metadata", async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({
+      data: [{ id: "sv8-13", name: "Pikachu", number: "13", images: {}, set: { id: "sv8", name: "Surging Sparks", releaseDate: "2024/11/08" } }],
+      count: 1, totalCount: 252,
+    }) });
+    const catalog = createPokemonTcgCatalog({ request, apiKey: "secret" });
+
+    await expect(catalog.getCardPrintingPage("sv8", 2, 12)).resolves.toMatchObject({
+      page: 2, pageSize: 12, totalCount: 252, items: [{ id: "sv8-13" }],
+    });
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request.mock.calls[0][0]).toContain("page=2");
+    expect(request.mock.calls[0][0]).toContain("pageSize=12");
+  });
+
+  it("returns every distinct rarity for a set and can page within one rarity", async () => {
+    const request = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        data: [{ rarity: "Rare" }, { rarity: "Special Illustration Rare" }, { rarity: "Rare" }], count: 3, totalCount: 3,
+      }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [], count: 0, totalCount: 6 }) });
+    const catalog = createPokemonTcgCatalog({ request, apiKey: "secret" });
+
+    await expect(catalog.listSetRarities("me5")).resolves.toEqual(["Rare", "Special Illustration Rare"]);
+    await expect(catalog.getCardPrintingPage("me5", 1, 12, "Special Illustration Rare")).resolves.toMatchObject({ totalCount: 6 });
+    expect(new URL(request.mock.calls[1][0]).searchParams.get("q")).toContain('rarity:"Special Illustration Rare"');
+  });
+
+  it("orders prices across the complete matching set before pagination with unavailable prices last", async () => {
+    const card = (id: string, number: string, amount?: number) => ({
+      id, name: id, number, images: {}, set: { id: "me5", name: "Pitch Black", releaseDate: "2026/07/17" },
+      tcgplayer: { updatedAt: "2026/08/23", prices: { normal: amount === undefined ? {} : { market: amount } } },
+    });
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({
+      data: [card("low", "1", 2), card("missing", "2"), card("high", "3", 20)], count: 3, totalCount: 3,
+    }) });
+    const catalog = createPokemonTcgCatalog({ request, apiKey: "secret" });
+
+    await expect(catalog.getCardPrintingPage("me5", 1, 2, undefined, "price-high")).resolves.toMatchObject({
+      items: [{ id: "high" }, { id: "low" }], totalCount: 3, quotedCount: 2,
+    });
+    await expect(catalog.getCardPrintingPage("me5", 2, 2, undefined, "price-high")).resolves.toMatchObject({
+      items: [{ id: "missing" }],
+    });
+  });
+
+  it("recovers when a repeated provider request succeeds on a later attempt", async () => {
+    const request = vi.fn()
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: {
+        id: "me5", name: "Pitch Black", releaseDate: "2026/07/17", total: 120,
+      } }) });
+    const catalog = createPokemonTcgCatalog({ request, apiKey: "secret" });
+
+    await expect(catalog.getSet("me5")).resolves.toMatchObject({ id: "me5" });
+    expect(request).toHaveBeenCalledTimes(2);
   });
 
   it("reports a provider failure as catalog unavailability", async () => {

@@ -1,4 +1,4 @@
-import type { Catalog, CardPrinting, CatalogSet, PriceQuote } from "./catalog";
+import type { Catalog, CardPrinting, CatalogSet, PriceOrder, PriceQuote } from "./catalog";
 import { searchQueryTerms } from "./search-query";
 
 type ProviderSet = { id: string; name: string; releaseDate: string; total?: number; images?: { logo?: string; symbol?: string } };
@@ -72,9 +72,12 @@ export function createPokemonTcgCatalog({ request, apiKey, timeoutMs = 8_000, pa
     try {
       return await Promise.race([
         (async () => {
-          const response = await request(`${providerBaseUrl}/${path}`, { headers: { "X-Api-Key": apiKey }, signal: controller.signal });
-          if (!response.ok) throw new CatalogUnavailableError();
-          return await response.json() as { data: T; count?: number; totalCount?: number };
+          for (let attempt = 1; attempt <= 5; attempt += 1) {
+            const response = await request(`${providerBaseUrl}/${path}`, { headers: { "X-Api-Key": apiKey }, signal: controller.signal });
+            if (response.ok) return await response.json() as { data: T; count?: number; totalCount?: number };
+            if (attempt === 5) throw new CatalogUnavailableError();
+          }
+          throw new CatalogUnavailableError();
         })(),
         new Promise<never>((_, reject) => {
           timeout = setTimeout(() => { controller.abort(); reject(new CatalogUnavailableError()); }, timeoutMs);
@@ -87,11 +90,11 @@ export function createPokemonTcgCatalog({ request, apiKey, timeoutMs = 8_000, pa
     }
   }
 
-  async function allPages<T>(resource: string, query?: string): Promise<T[]> {
+  async function allPages<T>(resource: string, query?: string, requestedPageSize = pageSize): Promise<T[]> {
     const items: T[] = [];
     let page = 1;
     do {
-      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      const params = new URLSearchParams({ page: String(page), pageSize: String(requestedPageSize) });
       if (query) params.set("q", query);
       const response = await requestData<T[]>(`${resource}?${params}`);
       items.push(...response.data);
@@ -101,15 +104,80 @@ export function createPokemonTcgCatalog({ request, apiKey, timeoutMs = 8_000, pa
     return items;
   }
 
+  async function resilientCardPages(query: string): Promise<CardPrinting[]> {
+    const pageSizes = [...new Set([pageSize, 50, 25, 10].map((size) => Math.min(pageSize, size)))];
+    for (const candidatePageSize of pageSizes) {
+      try {
+        return (await allPages<ProviderCard>("cards", query, candidatePageSize)).map(mapCard);
+      } catch {
+        if (candidatePageSize === pageSizes.at(-1)) throw new CatalogUnavailableError();
+      }
+    }
+    throw new CatalogUnavailableError();
+  }
+
+  async function priceSortedCardPage(query: string, page: number, requestedPageSize: number, order: PriceOrder) {
+    const cards = await resilientCardPages(query);
+    const totalCount = cards.length;
+    cards.sort((a, b) => {
+      if (!a.summaryPrice && b.summaryPrice) return 1;
+      if (a.summaryPrice && !b.summaryPrice) return -1;
+      const difference = (a.summaryPrice?.amount ?? 0) - (b.summaryPrice?.amount ?? 0);
+      if (difference) return order === "price-high" ? -difference : difference;
+      return a.collectorNumber.localeCompare(b.collectorNumber, undefined, { numeric: true });
+    });
+    const start = (page - 1) * requestedPageSize;
+    return {
+      items: cards.slice(start, start + requestedPageSize), page, pageSize: requestedPageSize, totalCount,
+      quotedCount: cards.filter((card) => card.summaryPrice).length,
+    };
+  }
+
   return {
     async listSets() {
       return (await allPages<ProviderSet>("sets")).map(mapSet)
         .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
     },
-    async getSet(id) { return mapSet((await requestData<ProviderSet>(`sets/${encodeURIComponent(id)}`)).data); },
+    async getSet(id) {
+      try {
+        return mapSet((await requestData<ProviderSet>(`sets/${encodeURIComponent(id)}`)).data);
+      } catch {
+        const safeId = id.replaceAll('"', "");
+        const [set] = await allPages<ProviderSet>("sets", `id:\"${safeId}\"`);
+        if (!set) throw new CatalogUnavailableError();
+        return mapSet(set);
+      }
+    },
+    async listSetRarities(setId) {
+      const safeId = setId.replaceAll('"', "");
+      const params = new URLSearchParams({ page: "1", pageSize: "250", q: `set.id:\"${safeId}\"`, select: "rarity" });
+      const response = await requestData<Array<Pick<ProviderCard, "rarity">>>(`cards?${params}`);
+      return [...new Set(response.data.flatMap((card) => card.rarity ? [card.rarity] : []))].sort();
+    },
+    async getCardPrintingPage(setId, page, requestedPageSize = 12, rarity, priceOrder) {
+      const safeId = setId.replaceAll('"', "");
+      const safeRarity = rarity?.replaceAll('"', "");
+      const safePage = Math.max(1, Math.trunc(page) || 1);
+      const safePageSize = Math.min(50, Math.max(1, Math.trunc(requestedPageSize) || 12));
+      const cardQuery = `set.id:\"${safeId}\"${safeRarity ? ` rarity:\"${safeRarity}\"` : ""}`;
+      if (priceOrder) return priceSortedCardPage(cardQuery, safePage, safePageSize, priceOrder);
+      const params = new URLSearchParams({
+        page: String(safePage),
+        pageSize: String(safePageSize),
+        q: cardQuery,
+      });
+      const response = await requestData<ProviderCard[]>(`cards?${params}`);
+      return {
+        items: response.data.map(mapCard),
+        page: safePage,
+        pageSize: safePageSize,
+        totalCount: response.totalCount ?? response.data.length,
+      };
+    },
     async listCardPrintings(setId) {
       const safeId = setId.replaceAll('"', "");
-      return (await allPages<ProviderCard>("cards", `set.id:\"${safeId}\"`)).map(mapCard);
+      const query = `set.id:\"${safeId}\"`;
+      return resilientCardPages(query);
     },
     async searchCardPrintings(query) {
       const terms = searchQueryTerms(query);
@@ -118,7 +186,7 @@ export function createPokemonTcgCatalog({ request, apiKey, timeoutMs = 8_000, pa
         const safeTerm = escapeLuceneQueryTerm(term);
         return `(name:*${safeTerm}* OR number:${safeTerm}*)`;
       }).join(" AND ");
-      const cards = (await allPages<ProviderCard>("cards", providerQuery)).map(mapCard);
+      const cards = await resilientCardPages(providerQuery);
       const normalizedTerms = terms.map((term) => term.toLocaleLowerCase());
       return cards.filter((card) => {
         const name = card.name.toLocaleLowerCase();

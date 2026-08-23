@@ -41,9 +41,21 @@ export type CardPrinting = {
   summaryPrice?: PriceQuote;
 };
 
+export type CardPrintingPage = {
+  items: CardPrinting[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  quotedCount?: number;
+};
+
+export type PriceOrder = "price-high" | "price-low";
+
 export interface Catalog {
   listSets(): Promise<CatalogSet[]>;
   getSet(id: string): Promise<CatalogSet>;
+  listSetRarities(setId: string): Promise<string[]>;
+  getCardPrintingPage(setId: string, page: number, pageSize?: number, rarity?: string, priceOrder?: PriceOrder): Promise<CardPrintingPage>;
   listCardPrintings(setId: string): Promise<CardPrinting[]>;
   searchCardPrintings(query: string): Promise<CardPrinting[]>;
   getCardPrinting(id: string): Promise<CardPrinting>;
